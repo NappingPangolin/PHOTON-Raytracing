@@ -1,0 +1,5 @@
+This code is a python and browser based ray tracer for physicist/researchers, who need correct timing and phase matching between optical modules.
+to use the code, start the app.py with python (get all the necessary libraries first), then open the raytracing.html in a browser. You can load from a Demo File to get a gist, of what you can do.
+A Full Documentation of the physics/math behind is in the making, I have to wait for the reviews of my dissertation to finish, till I can publish them, since they contain some elements that cant be published beforehand.
+What makes this code interesting is, that it can calculate GH and IF shifts upon reflection, calculates the phase of the electric fields correctly upon transmission and reflection and is quite easy to use (and free). 
+Best use cases are polarization checks/calculations for multiple reflections and timing for pulses when passing multiple arms like in interferometers/pump probe experiments etc.. No diffraction is calculated anywhere, so focal spot sizes are obviously not physically correct.
