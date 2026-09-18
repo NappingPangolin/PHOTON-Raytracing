@@ -1,0 +1,610 @@
+{
+  "modules": [
+    {
+      "type": "photon_source",
+      "id": "3bf72711",
+      "params": {
+        "r_x": 0.2,
+        "r_y": 0,
+        "r_z": 0.2,
+        "k_x": -1,
+        "k_y": 0,
+        "k_z": 0,
+        "E_x": 0,
+        "E_y": 0,
+        "E_z": 1,
+        "Phase_x": 0,
+        "Phase_y": 0,
+        "Phase_z": 0,
+        "wavelength": 8e-07,
+        "intensity": 1,
+        "pass_through": true,
+        "n_circles": 2,
+        "circle_radius": 0.017,
+        "photons_per_circle": 8,
+        "opening_angle": 0,
+        "focus_distance": 0,
+        "n_rays": 0,
+        "fan_angle_deg": 0
+      }
+    },
+    {
+      "type": "flat_mirror",
+      "id": "df8828cf",
+      "params": {
+        "r_x": -0.2,
+        "r_y": 0,
+        "r_z": 0.2,
+        "normal_x": 1,
+        "normal_y": 0,
+        "normal_z": -1,
+        "n": 0.036759,
+        "k": 5.5698,
+        "wavelength": 8e-07,
+        "beam_shifts": false,
+        "radius": 0.05,
+        "nk_mode": "manual",
+        "lnk_data": []
+      }
+    },
+    {
+      "type": "flat_mirror",
+      "id": "2d8cde52",
+      "params": {
+        "r_x": -0.2,
+        "r_y": 0,
+        "r_z": -0.2,
+        "normal_x": 1,
+        "normal_y": 0,
+        "normal_z": 1,
+        "n": 0.036759,
+        "k": 5.5698,
+        "wavelength": 8e-07,
+        "beam_shifts": false,
+        "radius": 0.05,
+        "nk_mode": "manual",
+        "lnk_data": []
+      }
+    },
+    {
+      "type": "parabolic_mirror",
+      "id": "22668d2d",
+      "params": {
+        "r_x": 0,
+        "r_y": 0,
+        "r_z": -0.2,
+        "k_in_x": 1,
+        "k_in_y": 0,
+        "k_in_z": 0,
+        "k_out_x": 0,
+        "k_out_y": 0,
+        "k_out_z": 1,
+        "focal_length": 0.0635,
+        "n": 0.036759,
+        "k_ext": 5.5698,
+        "wavelength": 8e-07,
+        "beam_shifts": false,
+        "radius": 0.05,
+        "nk_mode": "manual",
+        "lnk_data": []
+      }
+    },
+    {
+      "type": "photon_source",
+      "id": "bc2018b3",
+      "params": {
+        "r_x": 0.2,
+        "r_y": -0.03,
+        "r_z": 0.2,
+        "k_x": -1,
+        "k_y": 0,
+        "k_z": 0,
+        "E_x": 0,
+        "E_y": 0,
+        "E_z": 1,
+        "Phase_x": 0,
+        "Phase_y": 0,
+        "Phase_z": 0,
+        "wavelength": 8e-07,
+        "intensity": 1,
+        "pass_through": true,
+        "n_circles": 2,
+        "circle_radius": 0.005,
+        "photons_per_circle": 8,
+        "opening_angle": 0,
+        "focus_distance": 0,
+        "n_rays": 0,
+        "fan_angle_deg": 0
+      }
+    },
+    {
+      "type": "flat_mirror",
+      "id": "5a224f5c",
+      "params": {
+        "r_x": 0.15,
+        "r_y": -0.03,
+        "r_z": 0.2,
+        "normal_x": 1,
+        "normal_y": 1,
+        "normal_z": 0,
+        "n": 0.036759,
+        "k": 5.5698,
+        "wavelength": 8e-07,
+        "beam_shifts": false,
+        "radius": 0.0127,
+        "nk_mode": "manual",
+        "lnk_data": []
+      }
+    },
+    {
+      "type": "flat_mirror",
+      "id": "6e613957",
+      "params": {
+        "r_x": 0.15,
+        "r_y": 0.16,
+        "r_z": 0.2,
+        "normal_x": 0,
+        "normal_y": -1,
+        "normal_z": -1,
+        "n": 0.036759,
+        "k": 5.5698,
+        "wavelength": 8e-07,
+        "beam_shifts": false,
+        "radius": 0.0127,
+        "nk_mode": "manual",
+        "lnk_data": []
+      }
+    },
+    {
+      "type": "flat_mirror",
+      "id": "add31400",
+      "params": {
+        "r_x": 0.15,
+        "r_y": 0.16,
+        "r_z": 0.12,
+        "normal_x": 0,
+        "normal_y": -1,
+        "normal_z": 1,
+        "n": 0.036759,
+        "k": 5.5698,
+        "wavelength": 8e-07,
+        "beam_shifts": false,
+        "radius": 0.0127,
+        "nk_mode": "manual",
+        "lnk_data": []
+      }
+    },
+    {
+      "type": "flat_mirror",
+      "id": "53184e41",
+      "params": {
+        "r_x": 0.15,
+        "r_y": 0.08,
+        "r_z": 0.12,
+        "normal_x": 0,
+        "normal_y": 1,
+        "normal_z": -1,
+        "n": 0.036759,
+        "k": 5.5698,
+        "wavelength": 8e-07,
+        "beam_shifts": false,
+        "radius": 0.0127,
+        "nk_mode": "manual",
+        "lnk_data": []
+      }
+    },
+    {
+      "type": "flat_mirror",
+      "id": "58607769",
+      "params": {
+        "r_x": 0.15,
+        "r_y": 0.08,
+        "r_z": 0.02,
+        "normal_x": 0,
+        "normal_y": 1,
+        "normal_z": 1,
+        "n": 0.036759,
+        "k": 5.5698,
+        "wavelength": 8e-07,
+        "beam_shifts": false,
+        "radius": 0.0127,
+        "nk_mode": "manual",
+        "lnk_data": []
+      }
+    },
+    {
+      "type": "flat_mirror",
+      "id": "e3839cfe",
+      "params": {
+        "r_x": 0.15,
+        "r_y": 0.14,
+        "r_z": 0.02,
+        "normal_x": 0,
+        "normal_y": -1,
+        "normal_z": -1,
+        "n": 0.036759,
+        "k": 5.5698,
+        "wavelength": 8e-07,
+        "beam_shifts": false,
+        "radius": 0.0127,
+        "nk_mode": "manual",
+        "lnk_data": []
+      }
+    },
+    {
+      "type": "flat_mirror",
+      "id": "b45d6788",
+      "params": {
+        "r_x": 0.15,
+        "r_y": 0.14,
+        "r_z": -0.223,
+        "normal_x": 0.3827,
+        "normal_y": 0,
+        "normal_z": -0.9239,
+        "n": 0.036759,
+        "k": 5.5698,
+        "wavelength": 8e-07,
+        "beam_shifts": false,
+        "radius": 0.0127,
+        "nk_mode": "manual",
+        "lnk_data": []
+      }
+    },
+    {
+      "type": "flat_mirror",
+      "id": "32319313",
+      "params": {
+        "r_x": 0.0847,
+        "r_y": 0.14,
+        "r_z": -0.1577,
+        "normal_x": -0.560985526796931,
+        "normal_y": 0.608761429008721,
+        "normal_z": 0.560985526796931,
+        "n": 0.036759,
+        "k": 5.5698,
+        "wavelength": 8e-07,
+        "beam_shifts": false,
+        "radius": 0.0127,
+        "nk_mode": "manual",
+        "lnk_data": []
+      }
+    },
+    {
+      "type": "parabolic_mirror",
+      "id": "0902efb5",
+      "params": {
+        "r_x": 0.105,
+        "r_y": 0.0393,
+        "r_z": -0.1768,
+        "k_in_x": 0.183,
+        "k_in_y": -0.9659,
+        "k_in_z": -0.183,
+        "k_out_x": -0.683,
+        "k_out_y": -0.2588,
+        "k_out_z": 0.683,
+        "focal_length": 0.07,
+        "n": 0.036759,
+        "k_ext": 5.5698,
+        "wavelength": 8e-07,
+        "beam_shifts": false,
+        "radius": 0.0127,
+        "nk_mode": "manual",
+        "lnk_data": []
+      }
+    },
+    {
+      "type": "substrate",
+      "id": "ad83ef0e",
+      "params": {
+        "r_x": 0,
+        "r_y": 0,
+        "r_z": -0.073,
+        "n_x": -1,
+        "n_y": 0,
+        "n_z": 1,
+        "n_elements": 1,
+        "diameter": 0.05,
+        "n_internal": 0,
+        "intensity_threshold": 0.0001,
+        "beam_shifts": false,
+        "t_1": 0.005,
+        "n_1": 1.5168,
+        "k_1": 0,
+        "nk_mode_1": "manual",
+        "lnk_data_1": [],
+        "t_2": 0.005,
+        "n_2": 1.5168,
+        "k_2": 0,
+        "nk_mode_2": "manual",
+        "lnk_data_2": [],
+        "t_3": 0.005,
+        "n_3": 1.5168,
+        "k_3": 0,
+        "nk_mode_3": "manual",
+        "lnk_data_3": [],
+        "t_4": 0.005,
+        "n_4": 1.5168,
+        "k_4": 0,
+        "nk_mode_4": "manual",
+        "lnk_data_4": [],
+        "t_5": 0.005,
+        "n_5": 1.5168,
+        "k_5": 0,
+        "nk_mode_5": "manual",
+        "lnk_data_5": [],
+        "t_6": 0.005,
+        "n_6": 1.5168,
+        "k_6": 0,
+        "nk_mode_6": "manual",
+        "lnk_data_6": [],
+        "t_7": 0.005,
+        "n_7": 1.5168,
+        "k_7": 0,
+        "nk_mode_7": "manual",
+        "lnk_data_7": [],
+        "t_8": 0.005,
+        "n_8": 1.5168,
+        "k_8": 0,
+        "nk_mode_8": "manual",
+        "lnk_data_8": [],
+        "normal_0_x": -1,
+        "normal_0_y": 0,
+        "normal_0_z": 1,
+        "normal_1_x": -1,
+        "normal_1_y": 0,
+        "normal_1_z": 1,
+        "normal_2_x": 1,
+        "normal_2_y": 0,
+        "normal_2_z": 0,
+        "normal_3_x": 1,
+        "normal_3_y": 0,
+        "normal_3_z": 0,
+        "normal_4_x": 1,
+        "normal_4_y": 0,
+        "normal_4_z": 0,
+        "normal_5_x": 1,
+        "normal_5_y": 0,
+        "normal_5_z": 0,
+        "normal_6_x": 1,
+        "normal_6_y": 0,
+        "normal_6_z": 0,
+        "normal_7_x": 1,
+        "normal_7_y": 0,
+        "normal_7_z": 0,
+        "normal_8_x": 1,
+        "normal_8_y": 0,
+        "normal_8_z": 0
+      }
+    },
+    {
+      "type": "free_propagate",
+      "id": "c106d6bf",
+      "params": {
+        "distance": 0.1
+      }
+    },
+    {
+      "type": "compound_lens",
+      "id": "509bae52",
+      "params": {
+        "r_x": 0.09703215314216,
+        "r_y": -0.03558808779565,
+        "r_z": -0.1675157921172,
+        "n_x": 5.4,
+        "n_y": -1.986,
+        "n_z": -5.339,
+        "n_elements": 1,
+        "diameter": 0.0253,
+        "R_0": 0.171,
+        "R_1": -0.14,
+        "R_2": 0.08,
+        "R_3": -0.08,
+        "R_4": 0.08,
+        "R_5": -0.08,
+        "R_6": 0.08,
+        "R_7": -0.08,
+        "R_8": -0.1,
+        "t_1": 0.005,
+        "t_2": 0.01,
+        "t_3": 0.01,
+        "t_4": 0.01,
+        "t_5": 0.01,
+        "t_6": 0.01,
+        "t_7": 0.01,
+        "t_8": 0.01,
+        "n_1": 1.5168,
+        "n_2": 1.6727,
+        "n_3": 1.5168,
+        "n_4": 1.6727,
+        "n_5": 1.5168,
+        "n_6": 1.6727,
+        "n_7": 1.5168,
+        "n_8": 1.6727,
+        "k_1": 0,
+        "k_2": 0,
+        "k_3": 0,
+        "k_4": 0,
+        "k_5": 0,
+        "k_6": 0,
+        "k_7": 0,
+        "k_8": 0,
+        "nk_mode_1": "manual",
+        "lnk_data_1": [],
+        "nk_mode_2": "manual",
+        "lnk_data_2": [],
+        "nk_mode_3": "manual",
+        "lnk_data_3": [],
+        "nk_mode_4": "manual",
+        "lnk_data_4": [],
+        "nk_mode_5": "manual",
+        "lnk_data_5": [],
+        "nk_mode_6": "manual",
+        "lnk_data_6": [],
+        "nk_mode_7": "manual",
+        "lnk_data_7": [],
+        "nk_mode_8": "manual",
+        "lnk_data_8": [],
+        "display_wavelength": 8e-07
+      }
+    },
+    {
+      "type": "free_propagate",
+      "id": "dcb037cd",
+      "params": {
+        "distance": 0.1
+      }
+    }
+  ],
+  "routing": {
+    "3bf72711": {
+      "input_branches": [
+        0
+      ],
+      "output_branches": [
+        0
+      ]
+    },
+    "df8828cf": {
+      "input_branches": [
+        0
+      ],
+      "output_branches": [
+        0
+      ]
+    },
+    "2d8cde52": {
+      "input_branches": [
+        0
+      ],
+      "output_branches": [
+        0
+      ]
+    },
+    "22668d2d": {
+      "input_branches": [
+        0
+      ],
+      "output_branches": [
+        0
+      ]
+    },
+    "bc2018b3": {
+      "input_branches": [
+        1
+      ],
+      "output_branches": [
+        1
+      ]
+    },
+    "5a224f5c": {
+      "input_branches": [
+        1
+      ],
+      "output_branches": [
+        1
+      ]
+    },
+    "6e613957": {
+      "input_branches": [
+        1
+      ],
+      "output_branches": [
+        1
+      ]
+    },
+    "add31400": {
+      "input_branches": [
+        1
+      ],
+      "output_branches": [
+        1
+      ]
+    },
+    "53184e41": {
+      "input_branches": [
+        1
+      ],
+      "output_branches": [
+        1
+      ]
+    },
+    "58607769": {
+      "input_branches": [
+        1
+      ],
+      "output_branches": [
+        1
+      ]
+    },
+    "e3839cfe": {
+      "input_branches": [
+        1
+      ],
+      "output_branches": [
+        1
+      ]
+    },
+    "b45d6788": {
+      "input_branches": [
+        1
+      ],
+      "output_branches": [
+        1
+      ]
+    },
+    "32319313": {
+      "input_branches": [
+        1
+      ],
+      "output_branches": [
+        1
+      ]
+    },
+    "0902efb5": {
+      "input_branches": [
+        1
+      ],
+      "output_branches": [
+        1
+      ]
+    },
+    "ad83ef0e": {
+      "input_branches_front": [
+        0,
+        1,
+        2
+      ],
+      "input_branches_back": [],
+      "output_branches": [
+        2,
+        3
+      ]
+    },
+    "509bae52": {
+      "input_branches_front": [
+        2
+      ],
+      "input_branches_back": [],
+      "output_branches": [
+        4,
+        2
+      ]
+    },
+    "dcb037cd": {
+      "input_branches": [
+        2
+      ],
+      "output_branches": [
+        2
+      ]
+    },
+    "c106d6bf": {
+      "input_branches": [
+        2
+      ],
+      "output_branches": [
+        2
+      ]
+    }
+  }
+}

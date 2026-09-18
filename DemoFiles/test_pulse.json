@@ -1,0 +1,118 @@
+{
+  "modules": [
+    {
+      "type": "photon_source",
+      "id": "f753839c",
+      "params": {
+        "r_x": -1,
+        "r_y": 0,
+        "r_z": 0,
+        "k_x": 1,
+        "k_y": 0,
+        "k_z": 0,
+        "E_x": 0,
+        "E_y": 1,
+        "E_z": 1,
+        "Phase_x": 0,
+        "Phase_y": 0,
+        "Phase_z": 0,
+        "wavelength": 8e-07,
+        "intensity": 1,
+        "pass_through": true,
+        "n_circles": 0,
+        "circle_radius": 0.005,
+        "photons_per_circle": 8,
+        "opening_angle": 0,
+        "focus_distance": 0,
+        "n_rays": 0,
+        "fan_angle_deg": 0
+      }
+    },
+    {
+      "type": "flat_mirror",
+      "id": "03944cd9",
+      "params": {
+        "r_x": 0.0,
+        "r_y": 0.0,
+        "r_z": 0.0,
+        "normal_x": -1.0,
+        "normal_y": 0.0,
+        "normal_z": -1.0,
+        "n": 0.036759,
+        "k": 5.5698,
+        "wavelength": 8e-07,
+        "beam_shifts": false,
+        "radius": 0.05,
+        "nk_mode": "manual",
+        "lnk_data": []
+      }
+    },
+    {
+      "type": "flat_mirror",
+      "id": "6cb1da9a",
+      "params": {
+        "r_x": 0,
+        "r_y": 0,
+        "r_z": -1,
+        "normal_x": 1,
+        "normal_y": 0,
+        "normal_z": 1,
+        "n": 0.036759,
+        "k": 5.5698,
+        "wavelength": 8e-07,
+        "beam_shifts": false,
+        "radius": 0.05,
+        "nk_mode": "manual",
+        "lnk_data": []
+      }
+    },
+    {
+      "type": "detector",
+      "id": "51f9aea5",
+      "params": {
+        "label": "Det",
+        "r_x": 0.5,
+        "r_y": 0,
+        "r_z": -1,
+        "normal_x": -1,
+        "normal_y": 0,
+        "normal_z": 0,
+        "radius": 0.05
+      }
+    }
+  ],
+  "routing": {
+    "f753839c": {
+      "input_branches": [
+        0
+      ],
+      "output_branches": [
+        0
+      ]
+    },
+    "03944cd9": {
+      "input_branches": [
+        0
+      ],
+      "output_branches": [
+        0
+      ]
+    },
+    "6cb1da9a": {
+      "input_branches": [
+        0
+      ],
+      "output_branches": [
+        0
+      ]
+    },
+    "51f9aea5": {
+      "input_branches": [
+        0
+      ],
+      "output_branches": [
+        0
+      ]
+    }
+  }
+}

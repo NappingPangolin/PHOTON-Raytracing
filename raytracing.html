@@ -1,0 +1,4503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Optical Ray Tracer</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+:root {
+  --bg:       #0a0c10;
+  --bg1:      #0f1218;
+  --bg2:      #161b24;
+  --bg3:      #1c2230;
+  --border:   #2a3345;
+  --border2:  #3a4a60;
+  --text:     #c8d8f0;
+  --text2:    #7a90b0;
+  --text3:    #4a5a70;
+  --accent:   #3d8bff;
+  --accent2:  #1a4a99;
+  --green:    #34d399;
+  --amber:    #f59e0b;
+  --red:      #f87171;
+  --purple:   #a855f7;
+  --pink:     #f472b6;
+  --cyan:     #22d3ee;
+  --panel-w:  280px;
+  --results-w: 310px;
+  --header-h: 52px;
+}
+
+/* Branch color palette - up to 8 branches */
+:root {
+  --branch-0: #3d8bff;
+  --branch-1: #34d399;
+  --branch-2: #f59e0b;
+  --branch-3: #f472b6;
+  --branch-4: #a855f7;
+  --branch-5: #22d3ee;
+  --branch-6: #fb923c;
+  --branch-7: #a3e635;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* -- Header -- */
+header {
+  height: var(--header-h);
+  background: var(--bg1);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  flex-shrink: 0;
+  z-index: 100;
+}
+.logo {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: var(--accent);
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.logo-icon {
+  width: 28px; height: 28px;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+}
+header .spacer { flex: 1; }
+.hbtn {
+  height: 32px; padding: 0 14px; border-radius: 6px;
+  border: 1px solid var(--border2); background: transparent;
+  color: var(--text2); font-family: inherit; font-size: 0.75rem;
+  cursor: pointer; transition: all 0.15s;
+  display: flex; align-items: center; gap: 6px;
+}
+.hbtn:hover { background: var(--bg3); color: var(--text); border-color: var(--accent); }
+.hbtn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.hbtn.primary:hover { background: #5a9fff; }
+.hbtn.danger:hover { border-color: var(--red); color: var(--red); }
+
+/* -- Auto-run toggle -- */
+.auto-toggle {
+  display: flex; align-items: center; gap: 7px;
+  padding: 0 4px; cursor: pointer; user-select: none;
+}
+.auto-toggle-text {
+  font-size: 0.75rem; color: var(--text2); font-family: inherit;
+}
+.auto-toggle-switch {
+  position: relative; display: inline-block;
+  width: 34px; height: 18px; flex-shrink: 0;
+}
+.auto-toggle-switch input {
+  opacity: 0; width: 0; height: 0; position: absolute;
+}
+.auto-toggle-slider {
+  position: absolute; inset: 0; border-radius: 999px;
+  background: var(--bg3); border: 1px solid var(--border2);
+  transition: all 0.15s;
+}
+.auto-toggle-slider::before {
+  content: ""; position: absolute;
+  height: 12px; width: 12px; left: 2px; top: 2px;
+  border-radius: 50%; background: var(--text3);
+  transition: all 0.15s;
+}
+.auto-toggle-switch input:checked + .auto-toggle-slider {
+  background: var(--accent); border-color: var(--accent);
+}
+.auto-toggle-switch input:checked + .auto-toggle-slider::before {
+  transform: translateX(16px); background: #fff;
+}
+.auto-toggle:hover .auto-toggle-text { color: var(--text); }
+
+/* -- Layout -- */
+.workspace { display: flex; flex: 1; overflow: hidden; }
+
+/* -- Left panel -- */
+.panel-left {
+  width: var(--panel-w);
+  background: var(--bg1); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; flex-shrink: 0; overflow: hidden;
+}
+.panel-title {
+  font-family: 'Syne', sans-serif; font-size: 0.65rem; font-weight: 700;
+  letter-spacing: 0.15em; text-transform: uppercase; color: var(--text3);
+  padding: 14px 14px 10px; border-bottom: 1px solid var(--border);
+}
+.catalog-list { overflow-y: auto; flex: 1; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+.catalog-item {
+  border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
+  cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 10px;
+  background: var(--bg2);
+}
+.catalog-item:hover { border-color: var(--border2); background: var(--bg3); transform: translateX(2px); }
+.cat-icon { width: 32px; height: 32px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.cat-info { flex: 1; min-width: 0; }
+.cat-name { font-family: 'Syne', sans-serif; font-size: 0.8rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cat-type { font-size: 0.65rem; color: var(--text3); margin-top: 2px; }
+.cat-add { width: 22px; height: 22px; border-radius: 5px; border: 1px solid var(--border2); background: transparent; color: var(--text3); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; flex-shrink: 0; }
+.cat-add:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* -- Centre -- */
+.centre { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
+
+/* -- Pipeline Area (branched) -- */
+.pipeline-area {
+  border-bottom: 1px solid var(--border);
+  background: var(--bg1);
+  display: flex; flex-direction: column; flex-shrink: 0;
+  min-height: 120px; max-height: 340px;
+  overflow: hidden;
+  position: relative;
+}
+.pipeline-header {
+  display: flex; align-items: center; padding: 10px 14px 8px;
+  gap: 8px; flex-shrink: 0;
+}
+.pipeline-header-title {
+  font-family: 'Syne', sans-serif; font-size: 0.65rem; font-weight: 700;
+  letter-spacing: 0.15em; text-transform: uppercase; color: var(--text3);
+}
+#pipe-count { color: var(--text3); font-size: 0.65rem; font-weight: 400; }
+
+/* Scrollable pipeline canvas */
+.pipeline-canvas {
+  flex: 1; overflow: auto; padding: 8px 14px 12px;
+  display: flex; flex-direction: column; gap: 0;
+}
+.pipeline-canvas::-webkit-scrollbar { width: 4px; height: 4px; }
+.pipeline-canvas::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* One row per branch */
+.branch-row {
+  display: flex; align-items: center;
+  min-height: 72px; position: relative;
+  flex-shrink: 0;
+}
+
+/* Indent sub-branches */
+.branch-row[data-branch="0"] { padding-left: 0; }
+.branch-row[data-branch="1"] { padding-left: 32px; }
+.branch-row[data-branch="2"] { padding-left: 64px; }
+.branch-row[data-branch="3"] { padding-left: 96px; }
+.branch-row[data-branch="4"] { padding-left: 128px; }
+
+/* Branch label on the left */
+.branch-label {
+  position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+  font-size: 0.58rem; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; writing-mode: vertical-rl;
+  color: var(--text3); opacity: 0.5;
+  padding: 0 2px;
+}
+.branch-row[data-branch="0"] .branch-label { display: none; }
+
+/* Vertical connector line from parent splitter to sub-branch */
+.branch-connector-v {
+  position: absolute; left: 14px; top: 0; bottom: 50%;
+  width: 2px; border-left: 2px dashed var(--border2);
+  pointer-events: none;
+}
+.branch-row[data-branch="0"] .branch-connector-v { display: none; }
+
+/* Horizontal rail behind all module cards */
+.branch-rail {
+  display: flex; align-items: center; flex: 1; gap: 0;
+  min-height: 72px; overflow-x: visible;
+}
+
+/* Cards */
+.pipe-node { display: flex; align-items: center; flex-shrink: 0; }
+.pipe-connector {
+  width: 24px; height: 2px;
+  flex-shrink: 0; position: relative;
+}
+.pipe-connector::after {
+  content: ''; position: absolute;
+  right: -4px; top: -3px;
+  border: 4px solid transparent;
+}
+
+.pipe-card {
+  width: max-content;
+  min-width: 126px; max-width: 240px;
+  background: var(--bg2); border: 1.5px solid var(--border);
+  border-radius: 10px; padding: 9px 9px 7px;
+  cursor: pointer; transition: all 0.15s;
+  position: relative; flex-shrink: 0; user-select: none;
+}
+.pipe-card:hover { border-color: var(--border2); background: var(--bg3); }
+.pipe-card.selected { box-shadow: 0 0 0 1.5px var(--accent2); }
+.pipe-card.running { border-color: var(--green); }
+.pipe-card.error   { border-color: var(--red); }
+.pipe-card-header  { display: flex; align-items: flex-start; gap: 6px; margin-bottom: 5px; }
+.pipe-card-icon    { width: 24px; height: 24px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
+.pipe-card-label   { font-family: 'Syne', sans-serif; font-size: 0.7rem; font-weight: 600; line-height: 1.25; flex: 1; min-width: 0; white-space: normal; overflow: visible; word-break: break-word; }
+.pipe-card-id      { font-size: 0.56rem; color: var(--text3); white-space: nowrap; }
+.pipe-card-meta    { font-size: 0.6rem; color: var(--text2); line-height: 1.4; white-space: normal; word-break: break-word; }
+.pipe-del {
+  position: absolute; top: 5px; right: 5px;
+  width: 15px; height: 15px; border-radius: 4px; border: none;
+  background: transparent; color: var(--text3); font-size: 11px;
+  cursor: pointer; display: none; align-items: center; justify-content: center; transition: all 0.1s;
+}
+.pipe-card:hover .pipe-del { display: flex; }
+.pipe-del:hover { background: var(--red); color: #fff; }
+/* Drag-and-drop styles */
+.pipe-card.dragging {
+  opacity: 0.4;
+  border: 2px dashed var(--accent) !important;
+  box-shadow: none !important;
+}
+.pipe-card.drag-over {
+  border: 2px solid var(--accent) !important;
+  background: var(--bg3) !important;
+}
+.branch-rail.drag-over {
+  min-height: 80px;
+  border: 2px dashed var(--accent);
+  border-radius: 8px;
+  background: rgba(61, 139, 255, 0.05);
+}
+/* Branch output pills on splitter cards */
+.branch-pills { display: flex; gap: 3px; margin-top: 4px; flex-wrap: wrap; }
+.branch-pill {
+  font-size: 0.55rem; padding: 1px 5px; border-radius: 10px;
+  font-weight: 700; letter-spacing: 0.04em;
+}
+
+/* Recombiner tag shown on BS cards with 2 inputs */
+.pipe-card-recombine-tag {
+  font-size: 0.52rem; margin-top: 3px; display: flex; align-items: center; gap: 3px;
+  flex-wrap: wrap;
+}
+
+/* Multi-branch checkbox group in routing panel */
+.branch-check-group { display: flex; flex-direction: column; gap: 5px; flex: 1; }
+.branch-check-row {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.68rem; cursor: pointer;
+}
+.branch-check-row input[type=checkbox] { accent-color: var(--accent); width: 14px; height: 14px; cursor: pointer; }
+.branch-check-label { color: var(--text2); }
+
+/* Empty state */
+.pipeline-empty { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--text3); font-size: 0.8rem; gap: 8px; min-height: 72px; }
+
+/* 3D viewport */
+.viewport { flex: 1; position: relative; overflow: hidden; }
+#three-canvas { width: 100%; height: 100%; display: block; }
+.viewport-overlay { position: absolute; bottom: 12px; left: 12px; display: flex; gap: 8px; }
+.view-badge { background: rgba(10,12,16,0.75); backdrop-filter: blur(6px); border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; font-size: 0.68rem; color: var(--text2); }
+.viewport-hint { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: var(--text3); font-size: 0.85rem; text-align: center; pointer-events: none; transition: opacity 0.3s; }
+
+/* -- Right panel -- */
+.panel-right { width: var(--results-w); background: var(--bg1); border-left: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; overflow: hidden; }
+.tab-bar { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.tab { flex: 1; height: 40px; border: none; background: transparent; color: var(--text3); font-family: inherit; font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab:hover:not(.active) { color: var(--text2); }
+.tab-content { flex: 1; overflow-y: auto; overflow-x: hidden; }
+.tab-content::-webkit-scrollbar { width: 4px; }
+.tab-content::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+.tab-pane { padding: 12px; display: none; }
+.tab-pane.active { display: block; }
+
+/* Param form */
+.param-section-title { font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text3); margin: 14px 0 8px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
+.param-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px;}
+.param-cell { display: flex; flex-direction: column; min-width: 0;}
+.param-label { font-size: 0.68rem; color: var(--text2); margin-bottom: 4px; display: flex; justify-content: space-between; align-items: baseline;}
+/* .param-label { font-size: 0.68rem; color: var(--text2); margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; } */
+.param-unit { color: var(--text3); font-size: 0.62rem; }
+.param-input { width: 100%; height: 30px; background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-family: inherit; font-size: 0.75rem; padding: 0 10px; transition: border-color 0.15s; outline: none; }
+.param-input:focus { border-color: var(--accent); }
+.param-input[type="checkbox"] { width: auto; height: auto; accent-color: var(--accent); }
+.param-select { width: 100%; height: 30px; background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-family: inherit; font-size: 0.75rem; padding: 0 8px; outline: none; cursor: pointer; }
+.param-select:focus { border-color: var(--accent); }
+.param-apply { width: 100%; margin-top: 14px; height: 34px; border-radius: 7px; border: 1px solid var(--accent); background: var(--accent2); color: var(--accent); font-family: inherit; font-size: 0.75rem; letter-spacing: 0.05em; cursor: pointer; transition: all 0.15s; }
+.param-apply:hover { background: var(--accent); color: #fff; }
+.no-selection { color: var(--text3); font-size: 0.78rem; text-align: center; padding: 40px 20px; line-height: 1.8; }
+
+/* Routing section in params */
+.routing-box {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-top: 6px;
+}
+.routing-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; font-size: 0.68rem; color: var(--text2); }
+.routing-row:last-child { margin-bottom: 0; }
+.routing-select { flex: 1; height: 26px; background: var(--bg3); border: 1px solid var(--border2); border-radius: 5px; color: var(--text); font-family: inherit; font-size: 0.7rem; padding: 0 6px; outline: none; cursor: pointer; }
+.routing-badge { font-size: 0.6rem; padding: 2px 6px; border-radius: 10px; font-weight: 700; }
+
+/* Results */
+.result-block { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; overflow: hidden; }
+.result-block-header { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 9px 12px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s; }
+.result-block-header:hover { background: var(--bg3); }
+.result-block-icon { width: 22px; height: 22px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; }
+.result-block-label { font-family: 'Syne', sans-serif; font-size: 0.75rem; font-weight: 600; flex: 1 1 auto; min-width: 90px; }
+.result-block-badge { font-size: 0.6rem; padding: 2px 7px; border-radius: 20px; background: var(--bg3); color: var(--text2); border: 1px solid var(--border2); flex-shrink: 0; margin-left: auto; }
+.result-block-badge.ok  { background: rgba(52,211,153,0.1); color: var(--green); border-color: var(--green); }
+.result-block-badge.err { background: rgba(248,113,113,0.1); color: var(--red); border-color: var(--red); }
+.result-block-body { padding: 10px 12px; }
+.result-kv { display: flex; justify-content: space-between; align-items: baseline; font-size: 0.68rem; margin-bottom: 5px; gap: 8px; }
+.result-k { color: var(--text2); flex-shrink: 0; }
+.result-v { color: var(--text); font-size: 0.72rem; text-align: right; word-break: break-all; }
+.result-v.accent { color: var(--accent); }
+.result-v.green  { color: var(--green); }
+.result-v.amber  { color: var(--amber); }
+.photon-table { width: 100%; border-collapse: collapse; font-size: 0.64rem; margin-top: 6px; }
+.photon-table th { text-align: left; color: var(--text3); font-weight: 500; padding: 3px 6px; border-bottom: 1px solid var(--border); }
+.photon-table td { padding: 4px 6px; color: var(--text); border-bottom: 1px solid var(--border); font-size: 0.63rem; }
+.photon-table tr:last-child td { border-bottom: none; }
+.photon-table tr:hover td { background: var(--bg3); }
+
+/* -- Detector readout panel -- */
+.detector-readout {
+  margin-top: 8px;
+}
+.detector-readout-title {
+  font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text3); margin-bottom: 6px; padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.detector-photon-card {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 7px; margin-bottom: 8px; overflow: hidden;
+}
+.detector-photon-card:last-child { margin-bottom: 0; }
+.detector-photon-header {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 9px; background: rgba(107,114,128,0.12);
+  border-bottom: 1px solid var(--border);
+}
+.detector-photon-idx {
+  font-size: 0.6rem; font-weight: 700; color: var(--text3);
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--border2); display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.detector-photon-meta {
+  font-size: 0.62rem; color: var(--text2); flex: 1;
+}
+.detector-photon-I {
+  font-size: 0.65rem; color: var(--amber); font-weight: 600;
+}
+.detector-photon-body { padding: 7px 9px; }
+.det-section { margin-bottom: 6px; }
+.det-section:last-child { margin-bottom: 0; }
+.det-section-label {
+  font-size: 0.56rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text3); margin-bottom: 3px;
+}
+.det-vec-row {
+  display: grid; grid-template-columns: 14px 1fr 1fr;
+  gap: 3px 6px; align-items: baseline;
+  font-size: 0.63rem; margin-bottom: 2px;
+}
+.det-vec-axis {
+  color: var(--text3); font-weight: 700; text-align: center; font-size: 0.6rem;
+}
+.det-vec-val {
+  color: var(--text); font-variant-numeric: tabular-nums; word-break: break-all;
+}
+.det-vec-val.muted { color: var(--text2); }
+.det-e-grid {
+  display: grid;
+  grid-template-columns: 14px repeat(4, 1fr);
+  gap: 2px 4px;
+  font-size: 0.6rem; align-items: baseline;
+}
+.det-e-header { color: var(--text3); font-size: 0.56rem; text-align: center; }
+.det-e-axis   { color: var(--text3); font-weight: 700; text-align: center; font-size: 0.59rem; }
+.det-e-val    { color: var(--text); font-variant-numeric: tabular-nums; text-align: right; }
+.det-e-val.phase { color: var(--purple); }
+.det-e-val.amp   { color: var(--cyan); }
+.det-e-val.zero  { color: var(--text3); }
+.det-hit-pos { font-size: 0.62rem; color: var(--green); margin-top: 2px; }
+
+/* Status bar */
+.statusbar { height: 24px; background: var(--bg1); border-top: 1px solid var(--border); display: flex; align-items: center; padding: 0 12px; gap: 16px; font-size: 0.62rem; color: var(--text3); flex-shrink: 0; }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); flex-shrink: 0; }
+.status-dot.ready { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.status-dot.busy  { background: var(--amber); animation: pulse 1s infinite; }
+.status-dot.error { background: var(--red); }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* -- Branch picker modal -- */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px); display: none;
+  align-items: center; justify-content: center; z-index: 1000;
+}
+.modal-backdrop.open { display: flex; }
+.modal {
+  background: var(--bg1); border: 1px solid var(--border2);
+  border-radius: 14px; padding: 24px; min-width: 300px; max-width: 380px;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+}
+.modal-title { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
+.modal-sub   { font-size: 0.72rem; color: var(--text2); margin-bottom: 18px; line-height: 1.5; }
+.modal-branches { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+.modal-branch-btn {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-radius: 8px;
+  border: 1.5px solid var(--border); background: var(--bg2);
+  cursor: pointer; transition: all 0.15s; font-family: inherit;
+  text-align: left;
+}
+.modal-branch-btn:hover { border-color: var(--border2); background: var(--bg3); }
+.modal-branch-btn.active { border-color: var(--accent); }
+.modal-branch-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.modal-branch-name { font-size: 0.8rem; font-weight: 600; color: var(--text); }
+.modal-branch-desc { font-size: 0.65rem; color: var(--text2); margin-top: 1px; }
+.modal-footer { display: flex; gap: 8px; justify-content: flex-end; }
+.modal-btn { height: 32px; padding: 0 16px; border-radius: 7px; border: 1px solid var(--border2); background: transparent; color: var(--text2); font-family: inherit; font-size: 0.75rem; cursor: pointer; transition: all 0.15s; }
+.modal-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.modal-btn:hover { background: var(--bg3); color: var(--text); }
+.modal-btn.primary:hover { background: #5a9fff; }
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+#tab-animation.active {
+  display: flex; flex-direction: column; gap: 9px; font-size: 0.7rem; color: var(--text2);
+}
+.anim-section-title {
+  font-size: 0.72rem; font-weight: 600; color: var(--text); text-transform: uppercase;
+  letter-spacing: 0.03em; margin: 8px 0 -2px 0; padding-top: 8px; border-top: 1px solid var(--border2);
+}
+.anim-section-title:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+.pulse-panel-row { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.pulse-panel-row label { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+#tab-animation input[type="number"] {
+  width: 66px; background: var(--bg3); border: 1px solid var(--border2);
+  color: var(--text); border-radius: 4px; padding: 3px 5px; font-family: inherit; font-size: 0.72rem;
+}
+#tab-animation select {
+  background: var(--bg3); border: 1px solid var(--border2); color: var(--text);
+  border-radius: 4px; padding: 3px 6px; font-family: inherit; font-size: 0.72rem;
+}
+.pulse-record-label { cursor: pointer; }
+#tab-animation input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; }
+#tab-animation .hbtn { font-size: 0.7rem; padding: 6px 10px; }
+.pulse-panel-status { color: var(--text3); font-size: 0.65rem; min-height: 12px; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="logo"><div class="logo-icon">⟁</div>PHOTON by NMP</div>
+  <span style="color:var(--text3);font-size:0.7rem;">ray tracer</span>
+  <div class="spacer"></div>
+  <button class="hbtn" id="btn-load">⬆ Load</button>
+  <button class="hbtn" id="btn-save">⬇ Save</button>
+  <button class="hbtn danger" id="btn-reset">✕ Reset</button>
+  <label class="auto-toggle" id="auto-toggle-label" title="When on, the 3-D viewer re-runs the trace automatically every time a parameter is applied">
+    <span class="auto-toggle-text">Auto</span>
+    <span class="auto-toggle-switch">
+      <input type="checkbox" id="auto-toggle-checkbox">
+      <span class="auto-toggle-slider"></span>
+    </span>
+  </label>
+  <button class="hbtn primary" id="btn-run">▶ Run Trace</button>
+  <input type="file" id="file-input" accept=".json" style="display:none">
+</header>
+
+<div class="workspace">
+
+  <!-- Left: Module Catalog -->
+  <div class="panel-left">
+    <div class="panel-title">Module Library</div>
+    <div class="catalog-list" id="catalog-list"></div>
+  </div>
+
+  <!-- Centre: Pipeline + Viewport -->
+  <div class="centre">
+    <div class="pipeline-area">
+      <div class="pipeline-header">
+        <span class="pipeline-header-title">Pipeline</span>
+        <span id="pipe-count">0 modules</span>
+        <span style="flex:1"></span>
+        <span style="font-size:0.6rem;color:var(--text3)" id="branch-count"></span>
+      </div>
+      <div class="pipeline-canvas" id="pipeline-canvas">
+        <div class="pipeline-empty" id="pipeline-empty">
+          <span style="font-size:1.4rem;opacity:0.4">⟶</span>
+          Click a module in the library to add it to the pipeline
+        </div>
+      </div>
+    </div>
+    <div class="viewport" id="viewport">
+      <canvas id="three-canvas"></canvas>
+      <div class="viewport-hint" id="viewport-hint">Run a trace to visualise the ray paths</div>
+      <div class="viewport-overlay">
+        <div class="view-badge" id="vp-stats">– –</div>
+        <div class="view-badge">Drag: rotate * Right-drag / Middle-drag: pan * Scroll: zoom</div>
+        <button class="view-badge" id="btn-reset-view" style="cursor:pointer;border:1px solid var(--border2);background:rgba(10,12,16,0.75);color:var(--text2);font-family:inherit;font-size:0.68rem;padding:5px 10px;border-radius:6px;backdrop-filter:blur(6px);transition:all 0.15s;" onmouseover="this.style.color='var(--text)';this.style.borderColor='var(--accent)'" onmouseout="this.style.color='var(--text2)';this.style.borderColor='var(--border2)'">⟳ Reset View</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Params & Results -->
+  <div class="panel-right">
+    <div class="tab-bar">
+      <button class="tab active" data-tab="params">Parameters</button>
+      <button class="tab" data-tab="results">Results</button>
+      <button class="tab" data-tab="animation">Animation</button>
+    </div>
+    <div class="tab-content">
+      <div class="tab-pane active" id="tab-params">
+        <div class="no-selection" id="params-empty">Select a module in the pipeline to edit its parameters</div>
+        <div id="params-form" style="display:none"></div>
+      </div>
+      <div class="tab-pane" id="tab-results">
+        <div class="no-selection" id="results-empty">Run a trace to see results</div>
+        <div id="results-content" style="display:none"></div>
+      </div>
+      <div class="tab-pane" id="tab-animation">
+        <div class="anim-section-title">Pulse</div>
+        <div class="pulse-panel-row">
+          <label title="Real pulse duration (FWHM), used only to compute how many field oscillations fit in the visualised pulse.">Pulse duration
+            <input type="number" id="pulse-duration-fs" value="6" min="0.1" step="0.1"> fs</label>
+        </div>
+        <div class="pulse-panel-row">
+          <label title="On-screen length of the visualised pulse envelope, in the same metre units as the optical layout (the real ~µm-scale pulse is stretched to this size so it's visible).">Visual size
+            <input type="number" id="pulse-vis-size" value="5" min="0.1" step="0.1"> cm</label>
+        </div>
+        <div class="pulse-panel-row">
+          <label title="How far the E-field wiggle displaces sideways from the ray, in cm. Independent of pulse length - turn this up if the pulse is too small to notice.">Amplitude
+            <input type="number" id="pulse-amplitude" value="8" min="0.1" step="0.5"> cm</label>
+        </div>
+        <div class="pulse-panel-row">
+          <label title="How many wall-clock seconds the full trip (longest path, source to end) takes on screen. Relative speeds between media stay physically correct - this just scales all of them together.">Playback
+            <input type="number" id="pulse-playback-s" value="8" min="0.5" step="0.5"> s</label>
+        </div>
+        <div class="pulse-panel-row">
+          <label title="Fade the static ray lines while pulses are travelling, so the moving wavelets stand out.">
+            <input type="checkbox" id="pulse-dim-rays" checked> Dim static rays</label>
+        </div>
+        <div class="pulse-panel-row">
+          <label title="Draw a thick static arrow along each visible pulse's polarisation axis, so you can check the E-field orientation independently of the oscillation.">
+            <input type="checkbox" id="pulse-show-polaxis"> Show polarisation axis</label>
+        </div>
+
+        <div class="anim-section-title">Recording</div>
+        <div class="pulse-panel-row">
+          <label class="pulse-record-label" title="Record the pulse animation and download it when it finishes.">
+            <input type="checkbox" id="pulse-record"> Record video</label>
+        </div>
+        <div class="pulse-panel-row">
+          <label title="Output video resolution. Independent of the on-screen viewport size - the scene is re-rendered off-screen at this resolution while recording.">Resolution
+            <select id="pulse-res-preset">
+              <option value="1280x720">1280×720 (HD)</option>
+              <option value="1920x1080" selected>1920×1080 (Full HD)</option>
+              <option value="2560x1440">2560×1440 (QHD)</option>
+              <option value="3840x2160">3840×2160 (4K)</option>
+              <option value="custom">Custom…</option>
+            </select>
+          </label>
+        </div>
+        <div class="pulse-panel-row" id="pulse-res-custom-row" style="display:none">
+          <label>Width <input type="number" id="pulse-res-width" value="1920" min="64" step="16"> px</label>
+          <label>Height <input type="number" id="pulse-res-height" value="1080" min="64" step="16"> px</label>
+        </div>
+        <div class="pulse-panel-row">
+          <label title="Frames per second for the recorded video.">Frame rate
+            <input type="number" id="pulse-fps" value="30" min="5" max="60" step="1"> fps</label>
+        </div>
+
+        <div class="pulse-panel-row" style="margin-top:6px">
+          <button class="hbtn primary" id="btn-travel-pulses" disabled style="flex:1">▶ Travel Pulses</button>
+          <button class="hbtn" id="btn-stop-pulses" style="display:none">■ Stop</button>
+        </div>
+        <div class="pulse-panel-status" id="pulse-status"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Status bar -->
+<div class="statusbar">
+  <div class="status-dot ready" id="status-dot"></div>
+  <span id="status-text">Ready</span>
+  <span style="flex:1"></span>
+  <span id="status-photons"></span>
+</div>
+
+<!-- Branch picker modal -->
+<div class="modal-backdrop" id="branch-modal">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Choose Branch</div>
+    <div class="modal-sub" id="modal-sub">Select which optical branch this module should be added to.</div>
+    <div class="modal-branches" id="modal-branches"></div>
+    <!-- Recombine toggle: only shown for beamsplitter -->
+    <div id="modal-recombine-section" style="display:none;margin-bottom:16px;">
+      <div style="font-size:0.65rem;color:var(--text3);margin-bottom:8px;letter-spacing:0.08em;text-transform:uppercase;">Also accept input from</div>
+      <div id="modal-recombine-branches"></div>
+      <div style="font-size:0.62rem;color:var(--text2);margin-top:8px;line-height:1.5;padding:8px;background:var(--bg2);border-radius:6px;border:1px solid var(--border)">
+        ⊕ Recombining beam splitter: photons from both branches are processed together and cross-combined into two output ports.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn" id="modal-cancel">Cancel</button>
+      <button class="modal-btn primary" id="modal-confirm">Add Module</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// --------------------------------------------------------
+// Constants & State
+// --------------------------------------------------------
+const API = 'http://localhost:5050/api';
+
+// Branch colors matching CSS variables
+const BRANCH_COLORS = ['#3d8bff','#34d399','#f59e0b','#f472b6','#a855f7','#22d3ee','#fb923c','#a3e635'];
+
+function branchColor(b) { return BRANCH_COLORS[b % BRANCH_COLORS.length]; }
+
+// Modules that split one input into a reflected-side / transmitted-side
+// branch pair (obs[0] = reflected-like, obs[1] = transmitted-like), and so
+// get the two-branch routing UI (renderSplitterRoutingRows) instead of the
+// single-output one. Substrate follows the exact same convention as
+// BeamSplitter (see Scene.add_module / Scene.run in scene.py) — it just
+// has a variable number of beams per side instead of exactly one each.
+function isSplitModule(type) { return type === 'beamsplitter' || type === 'substrate' || type === 'dielectric_mirror' || type === 'compound_lens'; }
+function branchLabel(b) { return b === 0 ? 'Main' : `Branch ${b}`; }
+
+let catalog = [];
+let scene   = [];      // array of {id, type, label, color, icon, params, input_branches, input_branch, output_branches}
+let selectedId = null;
+let lastResult = null;
+let tempParabolicParams = null;
+let tempLensParams = null;
+let tempGradientParams = null;
+let tempSubstrateParams = null;
+
+// Auto-run: when enabled, applyParams() re-runs the trace automatically
+// after every successful parameter update (button click or Enter-in-field),
+// instead of requiring a manual "Run Trace" click each time.
+let autoRunEnabled = false;
+document.getElementById('auto-toggle-checkbox').addEventListener('change', (e) => {
+  autoRunEnabled = e.target.checked;
+});
+
+// Modal state
+let pendingModuleType    = null;
+let pendingBranchChoice  = 0;          // primary input branch
+let pendingExtraBranches = [];         // additional input branches (recombining BS)
+
+// --------------------------------------------------------
+// API helpers
+// --------------------------------------------------------
+async function api(path, method='GET', body=null) {
+  const opts = { method, headers: {'Content-Type':'application/json'} };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(API + path, opts);
+  return res.json();
+}
+
+// --------------------------------------------------------
+// Init
+// --------------------------------------------------------
+async function init() {
+  setStatus('Connecting...', 'busy');
+  try {
+    catalog = await api('/catalog');
+    scene   = await api('/scene');
+    renderCatalog();
+    renderPipeline();
+    initThree();
+    setStatus('Ready', 'ready');
+  } catch(e) {
+    setStatus('Cannot connect to server at localhost:5050', 'error');
+    document.getElementById('viewport-hint').innerHTML =
+      '<span style="color:var(--red)">⚠ Server not running<br><small>python app.py</small></span>';
+  }
+}
+
+// --------------------------------------------------------
+// Catalog
+// --------------------------------------------------------
+function renderCatalog() {
+  const el = document.getElementById('catalog-list');
+  el.innerHTML = catalog.map(m => `
+    <div class="catalog-item" onclick="requestAddModule('${m.type}')">
+      <div class="cat-icon" style="background:${m.color}22;border:1px solid ${m.color}44;color:${m.color}">${m.icon}</div>
+      <div class="cat-info">
+        <div class="cat-name">${m.label}</div>
+        <div class="cat-type">${m.type}</div>
+      </div>
+      <button class="cat-add">+</button>
+    </div>
+  `).join('');
+}
+
+// --------------------------------------------------------
+// Branch picker modal
+// --------------------------------------------------------
+
+function availableBranches() {
+  // All branches produced by the current scene
+  const branches = new Set([0]);
+  scene.forEach(m => {
+    (m.output_branches || []).forEach(b => branches.add(b));
+    (m.input_branches || [m.input_branch ?? 0]).forEach(b => branches.add(b));
+  });
+  return [...branches].sort((a,b) => a-b);
+}
+
+function nextBranchId() {
+  const branches = availableBranches();
+  return branches.length > 0 ? Math.max(...branches) + 1 : 1;
+}
+
+// -1 is the "New Branch" sentinel value throughout the routing UI
+const NEW_BRANCH = -1;
+
+function branchLabelFull(b, nextB) {
+  if (b === NEW_BRANCH) return `✦ New Branch ${nextB}`;
+  return branchLabel(b);
+}
+
+function requestAddModule(type) {
+  pendingModuleType    = type;
+  pendingExtraBranches = [];
+  const branches = availableBranches();
+
+  pendingBranchChoice = branches[0];
+  const cat = catalog.find(c => c.type === type);
+  const isBS = type === 'beamsplitter';
+  const nextB = nextBranchId();
+
+  document.getElementById('modal-title').textContent = isBS ? 'Choose Input Branch(es)' : 'Choose Branch';
+  document.getElementById('modal-sub').textContent = isBS
+    ? `"${cat?.label || type}" - select the primary input branch. For a recombining BS, also select additional branches below.`
+    : `"${cat?.label || type}" will receive photons on the selected branch.`;
+
+  const cont = document.getElementById('modal-branches');
+  // Existing branches + "New Branch" option
+  const allOptions = [...branches, NEW_BRANCH];
+  cont.innerHTML = allOptions.map(b => {
+    const isNew = b === NEW_BRANCH;
+    const col = isNew ? '#a855f7' : branchColor(b);
+    const label = isNew ? `✦ New Branch ${nextB}` : branchLabel(b);
+    const desc = isNew
+      ? 'Start a fresh independent branch (no input photons)'
+      : (() => {
+          const mods = scene.filter(m => (m.input_branches || [m.input_branch ?? 0]).includes(b)).map(m => m.label);
+          return mods.length ? mods.slice(-2).join(' -> ') : 'Empty branch';
+        })();
+    return `
+      <button class="modal-branch-btn${b===branches[0]?' active':''}" data-branch="${b}"
+        onclick="selectBranchInModal(${b})">
+        <div class="modal-branch-dot" style="${isNew
+          ? 'border:1.5px dashed #a855f7;background:transparent;width:10px;height:10px;border-radius:50%'
+          : 'background:'+col}"></div>
+        <div>
+          <div class="modal-branch-name" style="color:${isNew?col:'var(--text)'}">${label}</div>
+          <div class="modal-branch-desc">${desc}</div>
+        </div>
+      </button>`;
+  }).join('');
+
+  // Show recombine section only for beam splitter
+  const recSection = document.getElementById('modal-recombine-section');
+  if (isBS && branches.length >= 2) {
+    recSection.style.display = 'block';
+    renderRecombineBranchChecks(branches, pendingBranchChoice);
+  } else {
+    recSection.style.display = 'none';
+  }
+
+  document.getElementById('branch-modal').classList.add('open');
+}
+
+function renderRecombineBranchChecks(branches, primaryBranch) {
+  const cont = document.getElementById('modal-recombine-branches');
+  const others = branches.filter(b => b !== primaryBranch && b !== NEW_BRANCH);
+  if (others.length === 0) {
+    cont.innerHTML = '<div style="font-size:0.65rem;color:var(--text3)">Add more branches first by using a beam splitter above.</div>';
+    return;
+  }
+  cont.innerHTML = others.map(b => {
+    const col = branchColor(b);
+    const checked = pendingExtraBranches.includes(b);
+    return `<label class="branch-check-row">
+      <input type="checkbox" id="recom_${b}" value="${b}" ${checked ? 'checked' : ''}
+        onchange="toggleExtraBranch(${b})">
+      <div class="modal-branch-dot" style="background:${col};width:10px;height:10px;border-radius:50%;flex-shrink:0"></div>
+      <span class="branch-check-label">${branchLabel(b)}</span>
+    </label>`;
+  }).join('');
+}
+
+function toggleExtraBranch(b) {
+  const idx = pendingExtraBranches.indexOf(b);
+  if (idx >= 0) pendingExtraBranches.splice(idx, 1);
+  else           pendingExtraBranches.push(b);
+}
+
+function selectBranchInModal(b) {
+  pendingBranchChoice = b;
+  document.querySelectorAll('.modal-branch-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.branch) === b);
+  });
+  const branches = availableBranches();
+  if (document.getElementById('modal-recombine-section').style.display !== 'none') {
+    pendingExtraBranches = pendingExtraBranches.filter(x => x !== b);
+    renderRecombineBranchChecks(branches, b);
+  }
+}
+
+document.getElementById('modal-cancel').addEventListener('click', () => {
+  document.getElementById('branch-modal').classList.remove('open');
+  pendingModuleType = null;
+});
+
+document.getElementById('modal-confirm').addEventListener('click', () => {
+  document.getElementById('branch-modal').classList.remove('open');
+  confirmAddModule();
+});
+
+async function confirmAddModule() {
+  if (!pendingModuleType) return;
+  const type = pendingModuleType;
+  let primaryBranch = pendingBranchChoice;
+  if (primaryBranch === NEW_BRANCH) primaryBranch = nextBranchId();
+
+  const extraBranches  = pendingExtraBranches.filter(b => b !== primaryBranch && b !== NEW_BRANCH);
+  const inputBranches  = [primaryBranch, ...extraBranches];
+  pendingModuleType    = null;
+  pendingExtraBranches = [];
+
+  setStatus('Adding module...', 'busy');
+  const res = await api('/scene/add', 'POST', {
+    type,
+    params: {},
+    input_branches: inputBranches,
+  });
+  if (res.ok) {
+    scene = res.scene;
+    selectedId = res.id;
+    renderPipeline();
+    renderParams();
+    setStatus('Ready', 'ready');
+  } else {
+    setStatus('Error: ' + res.error, 'error');
+  }
+}
+
+
+// --------------------------------------------------------
+// Pipeline (branched 2D layout)
+// --------------------------------------------------------
+
+function renderPipeline() {
+  const canvas = document.getElementById('pipeline-canvas');
+  const empty  = document.getElementById('pipeline-empty');
+  const cnt    = document.getElementById('pipe-count');
+  const bcnt   = document.getElementById('branch-count');
+
+  cnt.textContent = `${scene.length} module${scene.length === 1 ? '' : 's'}`;
+
+  // Always clear canvas first
+  canvas.innerHTML = '';
+
+  if (scene.length === 0) {
+    empty.style.display = 'flex';
+    canvas.appendChild(empty);
+    bcnt.textContent = '';
+    return;
+  }
+
+  // --- Group modules by their PRIMARY input branch (input_branches[0]) ---
+  // Recombining BS modules appear in each of their input branch rows.
+  const byBranch = {};
+  scene.forEach(mod => {
+    const ibs = mod.input_branches || [mod.input_branch ?? 0];
+    // Primary branch: always add there
+    const primary = ibs[0];
+    if (!byBranch[primary]) byBranch[primary] = [];
+    byBranch[primary].push({mod, isPrimary: true});
+
+    // Secondary branches: show a ghost reference card
+    ibs.slice(1).forEach(b => {
+      if (!byBranch[b]) byBranch[b] = [];
+      byBranch[b].push({mod, isPrimary: false});
+    });
+  });
+
+  const branchIds = Object.keys(byBranch).map(Number).sort((a, b) => a - b);
+  bcnt.textContent = branchIds.length > 1 ? `${branchIds.length} branches` : '';
+
+  // Dynamic height
+  const rowH = 80;
+  const extraPad = 24;
+  const pipelineArea = document.querySelector('.pipeline-area');
+  pipelineArea.style.maxHeight = Math.min(340, rowH * branchIds.length + 48 + extraPad) + 'px';
+
+  // Render each branch row
+  branchIds.forEach(b => {
+    const row = document.createElement('div');
+    row.className = 'branch-row';
+    row.dataset.branch = b;
+
+    // Vertical connector for sub-branches
+    if (b > 0) {
+      const vc = document.createElement('div');
+      vc.className = 'branch-connector-v';
+      vc.style.borderColor = branchColor(b) + '66';
+      row.appendChild(vc);
+
+      const lbl = document.createElement('div');
+      lbl.className = 'branch-label';
+      lbl.style.color = branchColor(b);
+      lbl.style.opacity = '0.8';
+      lbl.textContent = branchLabel(b);
+      row.appendChild(lbl);
+    }
+
+    const rail = document.createElement('div');
+    rail.className = 'branch-rail';
+
+    const entries = byBranch[b];
+    entries.forEach((entry, i) => {
+      const {mod, isPrimary} = entry;
+      if (i > 0) {
+        const conn = document.createElement('div');
+        conn.className = 'pipe-connector';
+        const col = branchColor(b);
+        conn.style.background = `linear-gradient(90deg, ${col}44, ${col}88)`;
+        conn.innerHTML = '<span style="position:absolute;right:-5px;top:-4px;font-size:8px;color:' + col + '88">▶</span>';
+        const pn = document.createElement('div');
+        pn.className = 'pipe-node';
+        pn.appendChild(conn);
+        rail.appendChild(pn);
+      }
+
+      const node = document.createElement('div');
+      node.className = 'pipe-node';
+      const card = buildPipeCard(mod, b, isPrimary);
+      node.appendChild(card);
+      rail.appendChild(node);
+    });
+
+    row.appendChild(rail);
+    canvas.appendChild(row);
+  });
+}
+
+function buildPipeCard(mod, branch, isPrimary = true) {
+  const col = branchColor(branch);
+  const card = document.createElement('div');
+  const ibs = mod.input_branches || [mod.input_branch ?? 0];
+  const isRecombiner = isSplitModule(mod.type) && ibs.length >= 2;
+
+  card.className = 'pipe-card' + (selectedId === mod.id ? ' selected' : '');
+  card.dataset.id = mod.id;
+  card.style.borderLeftColor = col;
+  card.style.borderLeftWidth = '3px';
+
+  // Ghost style for secondary-branch appearances of recombining BS
+  if (!isPrimary) {
+    card.style.opacity = '0.55';
+    card.style.borderStyle = 'dashed';
+    card.title = `${mod.label} also receives input from ${branchLabel(branch)} (front/back sided module) - drag to pin this module's position relative to this branch`;
+  }
+
+  // Draggable on every appearance (primary AND ghost/secondary) - a module
+  // fed from more than one branch (e.g. a Substrate with several front/back
+  // inputs) can be repositioned from whichever branch row is convenient,
+  // not just its primary one. This is how you "pull the ghost" to a
+  // specific spot in the pipeline instead of relying on automatic ordering.
+  card.setAttribute('draggable', 'true');
+  card.dataset.moduleId = mod.id;
+  card.dataset.branch = branch;
+
+  // Branch pills - split modules (BS/substrate) show reflected/transmitted,
+  // other modules show output branch if different from input
+  let pillsHtml = '';
+  if (isSplitModule(mod.type) && mod.output_branches?.length >= 2) {
+    const [fb, bb] = mod.output_branches;
+    pillsHtml = `<div class="branch-pills">
+      <span class="branch-pill" style="background:${branchColor(fb)}22;color:${branchColor(fb)};border:1px solid ${branchColor(fb)}55">↗ Front ${branchLabel(fb)}</span>
+      <span class="branch-pill" style="background:${branchColor(bb)}22;color:${branchColor(bb)};border:1px solid ${branchColor(bb)}55">↘ Back ${branchLabel(bb)}</span>
+    </div>`;
+  } else if (mod.output_branches?.length > 0) {
+    const ob = mod.output_branches[0];
+    const ib = (mod.input_branches || [mod.input_branch ?? 0])[0];
+    if (ob !== ib) {
+      pillsHtml = `<div class="branch-pills">
+        <span class="branch-pill" style="background:${branchColor(ob)}22;color:${branchColor(ob)};border:1px solid ${branchColor(ob)}55">-> ${branchLabel(ob)}</span>
+      </div>`;
+    }
+  }
+
+  // Recombiner input tag: show all input branch dots on primary card
+  let recombineTag = '';
+  if (isRecombiner && isPrimary) {
+    const dots = ibs.map(b =>
+      `<span style="display:inline-flex;align-items:center;gap:2px;padding:1px 5px;border-radius:8px;font-size:0.52rem;background:${branchColor(b)}22;color:${branchColor(b)};border:1px solid ${branchColor(b)}44">⊕ ${branchLabel(b)}</span>`
+    ).join('');
+    recombineTag = `<div class="pipe-card-recombine-tag">${dots}</div>`;
+  }
+
+  const delBtn = isPrimary
+    ? `<button class="pipe-del" onclick="event.stopPropagation();removeModule('${mod.id}')">×</button>`
+    : '';
+
+  card.innerHTML = `
+    ${delBtn}
+    <div class="pipe-card-header">
+      <div class="pipe-card-icon" style="background:${mod.color}22;color:${mod.color}">${mod.icon}</div>
+      <div>
+        <div class="pipe-card-label">${mod.label}</div>
+        <div class="pipe-card-id">#${mod.id}</div>
+      </div>
+    </div>
+    <div class="pipe-card-meta">${getPipeCardMeta(mod)}</div>
+    ${recombineTag}
+    ${pillsHtml}
+  `;
+
+  if (isPrimary) {
+    card.addEventListener('click', () => selectModule(mod.id));
+  } else {
+    card.addEventListener('click', () => selectModule(mod.id));
+  }
+  return card;
+}
+
+// "λ=…nm" for manual n/k mode, or the literal string "table" when an lnk
+// table has been uploaded instead — used by every LnkMixin-based mirror.
+function nkModeLabel(p) {
+  if ((p.nk_mode || 'manual') === 'lnk_table') return 'table';
+  return `λ=${Math.round((p.wavelength||800e-9)*1e9)}nm`;
+}
+
+// Mirrors PhotonSource.process()'s photon-count logic exactly (see
+// misc_modules.py): a ring/circle pattern takes precedence over the legacy
+// fan, which itself only produces >1 ray when n_rays>1 AND fan_angle>0.
+// This reports the photons this source itself *generates*; if pass-through
+// is enabled, any forwarded upstream photons are on top of this and aren't
+// knowable without actually running the scene.
+function photonSourceOutputCount(p) {
+  const nCircles = parseInt(p.n_circles || 0);
+  if (nCircles > 0) {
+    return 1 + nCircles * parseInt(p.photons_per_circle || 0);
+  }
+  const nRays = parseInt(p.n_rays ?? 1);
+  const fan   = parseFloat(p.fan_angle_deg || 0);
+  if (nRays === 1 || fan === 0) return 1;
+  return nRays;
+}
+
+// Effective focal length of the CompoundLens stack, replicating the exact
+// ABCD system-matrix construction documented and implemented in
+// compound_lens.py (_stack_abcd / _abcd_to_focal / _sagitta / _t_min) so the
+// pipeline-card preview matches what a run will actually compute. Ignores
+// per-element lnk tables (uses the manual n_i, same as the module's
+// "Display λ" fallback) since resolving a table client-side isn't possible
+// from params alone.
+function compoundLensEFL(p) {
+  const N = Math.max(1, Math.min(8, parseInt(p.n_elements || 2)));
+  const h = parseFloat(p.diameter || 0.05) / 2.0;
+
+  const radii = [];
+  for (let i = 0; i <= N; i++) radii.push(parseFloat(p[`R_${i}`] ?? 0));
+
+  const tRaw = [], nGlass = [1.0];
+  for (let i = 1; i <= N; i++) {
+    tRaw.push(parseFloat(p[`t_${i}`] ?? 0.01));
+    nGlass.push(parseFloat(p[`n_${i}`] ?? 1.5));
+  }
+  nGlass.push(1.0);
+
+  const sagitta = (R, hh) => {
+    if (R === 0) return 0;
+    const R2 = R*R, h2 = hh*hh;
+    if (h2 >= R2) return Math.abs(R);
+    return Math.abs(R) - Math.sqrt(R2 - h2);
+  };
+  const tMin = (Rf, Rb, sagF, sagB) => {
+    const Ra = Rf, Rb2 = -Rb;
+    if (Ra > 0 && Rb2 < 0) return Math.abs(Ra) >= Math.abs(Rb2) ? 1e-10 : Math.abs(sagF - sagB);
+    if (Rb2 > 0 && Ra < 0) return Math.abs(Ra) <= Math.abs(Rb2) ? 1e-10 : Math.abs(sagF - sagB);
+    if (Ra < 0 && Rb2 < 0) return 1e-10;
+    return sagF + sagB;
+  };
+
+  const sags = radii.map(R => sagitta(R, h));
+  const thicknesses = [];
+  for (let i = 0; i < N; i++) {
+    const tm = tMin(radii[i], radii[i+1], sags[i], sags[i+1]);
+    thicknesses.push(Math.max(tRaw[i], tm));
+  }
+
+  const matMul = (m1, m2) => [
+    [m1[0][0]*m2[0][0] + m1[0][1]*m2[1][0], m1[0][0]*m2[0][1] + m1[0][1]*m2[1][1]],
+    [m1[1][0]*m2[0][0] + m1[1][1]*m2[1][0], m1[1][0]*m2[0][1] + m1[1][1]*m2[1][1]],
+  ];
+  const refractM = (nIn, nOut, R) => {
+    const phi = R === 0 ? 0 : (nOut - nIn) / R;
+    return [[1, 0], [-phi, 1]];
+  };
+  const propM = (t, n) => [[1, t/n], [0, 1]];
+
+  let M = refractM(nGlass[N], nGlass[N+1], radii[N]);
+  for (let i = N - 1; i >= 0; i--) {
+    M = matMul(M, propM(thicknesses[i], nGlass[i+1]));
+    M = matMul(M, refractM(nGlass[i], nGlass[i+1], radii[i]));
+  }
+
+  const C = M[1][0];
+  return Math.abs(C) < 1e-30 ? Infinity : -1.0 / C;
+}
+
+function getPipeCardMeta(mod) {
+  const p = mod.params;
+  switch(mod.type) {
+    case 'flat_mirror':      return nkModeLabel(p);
+    case 'parabolic_mirror': return `${nkModeLabel(p)}  f=${fmtSI(p.focal_length)}m (PFL)`;
+    case 'plasma_gradient':  return `${p.profile||'exp'}`;
+    case 'photon_source':    return `λ=${Math.round((p.wavelength||800e-9)*1e9)}nm  N=${photonSourceOutputCount(p)}`;
+    case 'free_propagate':   return `d=${fmtSI(p.distance)}m`;
+    case 'beamsplitter':     return `R=${Math.round((p.R||0.5)*100)}%`;
+    case 'detector':         return p.label ? `"${p.label}"` : 'Det';
+    case 'compound_lens':    return `${p.n_elements||2}-element  EFL=${fmtSI(compoundLensEFL(p))}m`;
+    case 'substrate':        return `${p.n_elements||1}-element, N=${p.n_internal||0}`;
+    case 'dielectric_mirror': return `${p.n_layers||2}-layer stack`;
+    case 'gradient_medium':  return `${p.gradient_mode||'1D exp'}`;
+    default:                 return mod.type;
+  }
+}
+
+function fmtSI(v) {
+  if (v == null) return '?';
+  v = parseFloat(v);
+  if (Math.abs(v) >= 0.01) return v.toPrecision(3);
+  if (Math.abs(v) >= 1e-6) return (v*1e3).toPrecision(3)+'m';
+  if (Math.abs(v) >= 1e-9) return (v*1e6).toPrecision(3)+'μ';
+  return v.toExponential(2);
+}
+
+// --------------------------------------------------------
+// Module CRUD
+// --------------------------------------------------------
+async function removeModule(id) {
+  const res = await api('/scene/remove', 'POST', {id});
+  if (res.ok) {
+    scene = res.scene;
+    if (selectedId === id) { selectedId = null; renderParams(); }
+    renderPipeline();
+  }
+}
+
+async function selectModule(id) {
+  selectedId = id;
+  document.querySelectorAll('.pipe-card').forEach(c => {
+    c.classList.toggle('selected', c.dataset.id === id);
+  });
+  renderParams();
+  activateTab('params');
+}
+
+// --------------------------------------------------------
+// Params panel
+// --------------------------------------------------------
+function renderParams() {
+  const empty = document.getElementById('params-empty');
+  const form  = document.getElementById('params-form');
+  if (!selectedId) {
+    empty.style.display = 'block'; form.style.display = 'none'; return;
+  }
+  const mod = scene.find(m => m.id === selectedId);
+  const cat = catalog.find(c => c.type === mod.type);
+  if (!mod || !cat) return;
+
+  empty.style.display = 'none'; form.style.display = 'block';
+  const ibs = mod.input_branches || [mod.input_branch ?? 0];
+  const primaryBranch = ibs[0];
+  const col = branchColor(primaryBranch);
+
+  form.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+      <div style="width:30px;height:30px;border-radius:7px;background:${mod.color}22;color:${mod.color};display:flex;align-items:center;justify-content:center;font-size:15px;">${mod.icon}</div>
+      <div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;">${mod.label}</div>
+        <div style="font-size:0.62rem;color:var(--text3)">id: ${mod.id}</div>
+      </div>
+    </div>
+
+    <div class="param-section-title">Routing</div>
+    <div class="routing-box">
+      ${isSplitModule(mod.type)
+        ? renderSidedRoutingRows(mod)
+        : `<div class="routing-row">
+             <span style="flex-shrink:0">Input</span>
+             ${renderBranchSelect('route_input', primaryBranch, availableBranches())}
+           </div>
+           ${renderOutputRoutingRow(mod)}`
+      }
+    </div>
+    <button class="param-apply" style="margin-top:8px;margin-bottom:14px" onclick="applyRouting()">Apply Routing</button>
+
+    <div class="param-section-title">Parameters</div>
+    ${
+      groupParams(cat.params).map(row => {
+        // lnk_table params get their own full-width row (no 3-col grid)
+        if (row.length === 1 && row[0].type === 'lnk_table') {
+          return `<div style="margin-bottom:10px">${renderParamInput(row[0], mod.params)}</div>`;
+        }
+        return `<div class="param-row">
+          ${row.map(ps => renderParamInput(ps, mod.params)).join('')}
+        </div>`;
+      }).join('')
+    }
+    
+    <button class="param-apply" onclick="applyParams()">Apply Parameters</button>
+  `;
+  if (mod.type === 'parabolic_mirror') {
+  // Initialize temp params
+  tempParabolicParams = {...mod.params};
+
+  // Add derived parameters section
+  const derived = calcParabolicDerived(tempParabolicParams);
+  form.innerHTML += `
+    <div class="param-section-title">Derived Parameters</div>
+    <div class="routing-box">
+      <div class="result-kv">
+        <span class="result-k">Focus -> Mirror Centre</span>
+        <span class="result-v accent" id="derived-d">${fmtSI(derived.d)} m</span>
+      </div>
+      <div class="result-kv">
+        <span class="result-k">Off-Axis Angle</span>
+        <span class="result-v" id="derived-theta">${derived.theta_deg.toFixed(2)}°</span>
+      </div>
+    </div>
+  `;
+
+  // Add event listeners to ALL inputs in the form
+  form.querySelectorAll('input.param-input').forEach(input => {
+    input.addEventListener('input', (e) => {
+      // Extract parameter name from input's name/id or parent label
+      let name = input.name || input.id;
+      if (!name) {
+        const label = input.closest('.param-cell')?.querySelector('.param-label');
+        name = label?.textContent?.trim()?.toLowerCase().replace(/\s+/g, '_');
+      }
+      if (name && tempParabolicParams) {
+        tempParabolicParams[name] = parseFloat(e.target.value) || 0;
+        const derived = calcParabolicDerived(tempParabolicParams);
+        document.getElementById('derived-d').textContent = `${fmtSI(derived.d)} m`;
+        document.getElementById('derived-theta').textContent = `${derived.theta_deg.toFixed(2)}°`;
+      }
+    });
+  });
+}
+
+
+  if (mod.type === 'compound_lens') {
+    tempLensParams = {...mod.params};
+
+    // -- lnk table interpolation (mirrors optics_sim/lnk_table.py LnkTable.get_nk) --
+    // rows: [[wl_um, n, k], ...] (not necessarily sorted, e.g. after scene reload)
+    function lnkInterp(rows, wl_um) {
+      const sorted = [...rows].sort((a, b) => a[0] - b[0]);
+      const wls = sorted.map(r => r[0]);
+      if (wls.length === 0) return { n: 1.0, k: 0.0 };
+      if (wl_um <= wls[0])  return { n: sorted[0][1], k: sorted[0][2] };
+      const last = sorted[sorted.length - 1];
+      if (wl_um >= wls[wls.length - 1]) return { n: last[1], k: last[2] };
+      let lo = 0, hi = wls.length - 1;
+      while (hi - lo > 1) {
+        const mid = (lo + hi) >> 1;
+        if (wls[mid] <= wl_um) lo = mid; else hi = mid;
+      }
+      const t = (wl_um - wls[lo]) / (wls[hi] - wls[lo]);
+      return {
+        n: sorted[lo][1] + t * (sorted[hi][1] - sorted[lo][1]),
+        k: sorted[lo][2] + t * (sorted[hi][2] - sorted[lo][2]),
+      };
+    }
+
+    // Resolve element i's (n, k) at the given wavelength (metres), using its
+    // uploaded lnk table when nk_mode_i === 'lnk_table' and data is present -
+    // exactly like LnkMixin._resolve_nk on the backend - falling back to the
+    // manual n_i/k_i fields otherwise.
+    function resolveElementNk(pr, i, wavelength_m) {
+      const mode = pr[`nk_mode_${i}`] || 'manual';
+      const rows = pr[`lnk_data_${i}`];
+      if (mode === 'lnk_table' && Array.isArray(rows) && rows.length) {
+        const { n, k } = lnkInterp(rows, wavelength_m * 1e6);
+        return { n, k, source: 'lnk_table' };
+      }
+      return {
+        n: parseFloat(pr[`n_${i}`]) || 1.5,
+        k: parseFloat(pr[`k_${i}`]) || 0.0,
+        source: 'manual',
+      };
+    }
+
+    // -- ABCD matrix for an N-element cemented stack --
+    // Uses the same sign convention as the Python backend:
+    //   C_i = v_i + R_i * nhat  (R>0 -> centre on outgoing side)
+    // Matrix convention: ray vector [y, n*theta]
+    //   Refraction matrix R(n_in, n_out, R): phi = (n_out-n_in)/R
+    //     [[1, 0], [-phi, 1]]
+    //   Propagation matrix T(t, n):
+    //     [[1, t/n], [0, 1]]
+    // Chain built right-to-left: M = R_exit * T_N * R_{N-1} * ... * T_1 * R_entry
+    function stackABCD(pr) {
+      const N   = Math.max(1, Math.min(8, parseInt(pr.n_elements) || 2));
+      const lam = parseFloat(pr.display_wavelength) || 800e-9;
+      const radii = [];
+      for (let i = 0; i <= N; i++) radii.push(parseFloat(pr[`R_${i}`]) || 0);
+      const t_arr = [];
+      for (let i = 1; i <= N; i++) t_arr.push(parseFloat(pr[`t_${i}`]) || 0.01);
+
+      // Resolve n (and k, for the summary note) per element - from the lnk
+      // table at Display λ when that element's n/k Source is set to it.
+      const nk_arr = [];
+      for (let i = 1; i <= N; i++) nk_arr.push(resolveElementNk(pr, i, lam));
+      const n_arr = nk_arr.map(nk => nk.n);
+
+      // n_media: [1, n_1, n_2, ..., n_N, 1]
+      const nm = [1.0, ...n_arr, 1.0];
+
+      function refract(nIn, nOut, R) {
+        const phi = Math.abs(R) > 1e-30 ? (nOut - nIn) / R : 0;
+        return [[1, 0], [-phi, 1]];
+      }
+      function propagate(t, n) { return [[1, t / n], [0, 1]]; }
+      function mul(A, B) {
+        return [
+          [A[0][0]*B[0][0] + A[0][1]*B[1][0],  A[0][0]*B[0][1] + A[0][1]*B[1][1]],
+          [A[1][0]*B[0][0] + A[1][1]*B[1][0],  A[1][0]*B[0][1] + A[1][1]*B[1][1]]
+        ];
+      }
+
+      // Build right-to-left
+      let M = refract(nm[N], nm[N+1], radii[N]);
+      for (let i = N - 1; i >= 0; i--) {
+        M = mul(M, propagate(t_arr[i], nm[i+1]));
+        M = mul(M, refract(nm[i], nm[i+1], radii[i]));
+      }
+
+      const A = M[0][0], B = M[0][1], C = M[1][0], D = M[1][1];
+      if (Math.abs(C) < 1e-30)
+        return {efl:Infinity, ffl:Infinity, bfl:Infinity, h1:Infinity, h2:Infinity, A, B, C, D, nk_arr};
+      return {
+        efl: -1/C, ffl: D/C, bfl: -A/C,
+        h1: (D-1)/C, h2: (1-A)/C,
+        A, B, C, D, nk_arr,
+      };
+    }
+
+    // -- Dynamic row visibility (hide rows for unused elements) ----------─
+    function updateElementVisibility() {
+      const N = Math.max(1, Math.min(8, parseInt(
+        form.querySelector('[id="pi_n_elements"]')?.value ?? mod.params.n_elements ?? 2
+      )));
+      // Show/hide surface-radius rows (R_0..R_N visible, rest hidden)
+      for (let i = 0; i <= 8; i++) {
+        const el = form.querySelector(`[id="pi_R_${i}"]`)?.closest('.param-row');
+        if (el) el.style.display = (i <= N) ? '' : 'none';
+      }
+      // Show/hide thickness / n / k rows (1..N visible, rest hidden)
+      for (let i = 1; i <= 8; i++) {
+        ['t_', 'n_', 'k_'].forEach(prefix => {
+          const el = form.querySelector(`[id="pi_${prefix}${i}"]`)?.closest('.param-row');
+          if (el) el.style.display = (i <= N) ? '' : 'none';
+        });
+        // Also hide per-element lnk controls for unused elements
+        ['nk_mode_', 'lnk_data_'].forEach(prefix => {
+          // nk_mode uses param-row; lnk_data uses the full-width div wrapper
+          const el = form.querySelector(`[id="pi_${prefix}${i}"]`)
+            ?.closest('.param-row, [style*="margin-bottom"]');
+          if (el) el.style.display = (i <= N) ? '' : 'none';
+        });
+      }
+    }
+
+    // -- Derived panel ------------
+    const fmtF = f => isFinite(f) ? `${fmtSI(f)} m` : '∞ (afocal)';
+    const d0   = stackABCD(tempLensParams);
+
+    // Small note listing which elements' n (and k) actually came from an
+    // uploaded lnk table at Display λ, vs. the manual n_i/k_i fields, so the
+    // EFL/FFL/BFL shown above are traceable back to where each n came from.
+    function nkNoteHTML(nk_arr) {
+      const rows = nk_arr.map((nk, idx) => {
+        const i = idx + 1;
+        const tag = nk.source === 'lnk_table'
+          ? `<span style="color:var(--green)">lnk table</span>`
+          : `<span style="color:var(--text3)">manual</span>`;
+        return `n${i}=${nk.n.toFixed(5)} (${tag})`;
+      }).join(' &nbsp;·&nbsp; ');
+      return rows;
+    }
+
+    form.innerHTML += `
+      <div class="param-section-title">Derived Parameters (ABCD)</div>
+      <div style="font-size:0.62rem;color:var(--text3);margin-bottom:6px;line-height:1.5;padding:0 2px">
+        Paraxial first-order properties via ABCD matrix at
+        <strong style="color:var(--text2)">Display λ</strong>, resolving each
+        element's n/k from its uploaded lnk table when that element's
+        n/k Source is set to <code>lnk_table</code> (manual n/k otherwise).
+        Ray tracing always uses each photon's own wavelength.
+      </div>
+      <div class="routing-box">
+        <div class="result-kv">
+          <span class="result-k">EFL</span>
+          <span class="result-v ${d0.efl > 0 ? 'accent' : d0.efl < 0 ? 'amber' : ''}" id="cdl-efl">${fmtF(d0.efl)}</span>
+        </div>
+        <div class="result-kv">
+          <span class="result-k">FFL</span>
+          <span class="result-v" id="cdl-ffl">${fmtF(d0.ffl)}</span>
+        </div>
+        <div class="result-kv">
+          <span class="result-k">BFL</span>
+          <span class="result-v" id="cdl-bfl">${fmtF(d0.bfl)}</span>
+        </div>
+        <div class="result-kv">
+          <span class="result-k">H₁ (from front vertex)</span>
+          <span class="result-v" id="cdl-h1">${fmtF(d0.h1)}</span>
+        </div>
+        <div class="result-kv">
+          <span class="result-k">H₂ (from rear vertex)</span>
+          <span class="result-v" id="cdl-h2">${fmtF(d0.h2)}</span>
+        </div>
+        <div class="result-kv" style="margin-top:4px;border-top:1px solid var(--border);padding-top:4px">
+          <span class="result-k" style="font-size:0.6rem;color:var(--text3)">ABCD  A*D − B*C = ${(d0.A*d0.D - d0.B*d0.C).toFixed(6)}</span>
+        </div>
+        <div style="margin-top:6px;font-size:0.6rem;line-height:1.7;color:var(--text2)" id="cdl-nk-note">${nkNoteHTML(d0.nk_arr)}</div>
+      </div>
+    `;
+
+    // Apply visibility immediately, then on every input change
+    updateElementVisibility();
+
+    function refreshDerivedPanel() {
+      const dv = stackABCD(tempLensParams);
+      const upd = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = fmtF(val); };
+      upd('cdl-efl', dv.efl);
+      upd('cdl-ffl', dv.ffl);
+      upd('cdl-bfl', dv.bfl);
+      upd('cdl-h1',  dv.h1);
+      upd('cdl-h2',  dv.h2);
+      const det = document.querySelector('#cdl-h2')?.closest('.routing-box')
+                    ?.querySelector('.result-k[style*="border-top"]');
+      if (det) det.textContent = `ABCD  A*D − B*C = ${(dv.A*dv.D - dv.B*dv.C).toFixed(6)}`;
+      const eflEl = document.getElementById('cdl-efl');
+      if (eflEl) eflEl.className = `result-v ${dv.efl>0?'accent':dv.efl<0?'amber':''}`;
+      const noteEl = document.getElementById('cdl-nk-note');
+      if (noteEl) noteEl.innerHTML = nkNoteHTML(dv.nk_arr);
+    }
+
+    form.querySelectorAll('input.param-input[type="number"]').forEach(input => {
+      input.addEventListener('input', () => {
+        const name = input.id?.replace(/^pi_/, '');
+        if (name) tempLensParams[name] = parseFloat(input.value) || 0;
+        if (name === 'n_elements') updateElementVisibility();
+        refreshDerivedPanel();
+      });
+    });
+
+    // nk_mode_i is a <select>, not an <input>, and switching it between
+    // 'manual' and 'lnk_table' changes which n/k feed the ABCD calc above,
+    // so it needs its own listener.
+    form.querySelectorAll('select.param-select').forEach(sel => {
+      sel.addEventListener('change', () => {
+        const name = sel.id?.replace(/^pi_/, '');
+        if (name) tempLensParams[name] = sel.value;
+        refreshDerivedPanel();
+      });
+    });
+  }
+
+  if (mod.type === 'substrate') {
+    tempSubstrateParams = {...mod.params};
+
+    // -- Dynamic row visibility (hide rows for unused elements/surfaces) --
+    // A substrate with N elements has N thickness/n/k rows (i=1..N) but
+    // N+1 surfaces, each with its own normal (i=0..N) — one more surface
+    // than elements, same as CompoundLens's radii.
+    function updateSubstrateVisibility() {
+      const N = Math.max(1, Math.min(8, parseInt(
+        form.querySelector('[id="pi_n_elements"]')?.value ?? mod.params.n_elements ?? 1
+      )));
+      for (let i = 1; i <= 8; i++) {
+        ['t_', 'n_', 'k_'].forEach(prefix => {
+          const el = form.querySelector(`[id="pi_${prefix}${i}"]`)?.closest('.param-row');
+          if (el) el.style.display = (i <= N) ? '' : 'none';
+        });
+        // Per-element lnk controls for unused elements
+        ['nk_mode_', 'lnk_data_'].forEach(prefix => {
+          const el = form.querySelector(`[id="pi_${prefix}${i}"]`)
+            ?.closest('.param-row, [style*="margin-bottom"]');
+          if (el) el.style.display = (i <= N) ? '' : 'none';
+        });
+      }
+      // Surface normals: N+1 surfaces (0..N) visible, rest hidden
+      for (let i = 0; i <= 8; i++) {
+        const el = form.querySelector(`[id="pi_normal_${i}_x"]`)?.closest('.param-row');
+        if (el) el.style.display = (i <= N) ? '' : 'none';
+      }
+    }
+
+    updateSubstrateVisibility();
+
+    // -- "Match all normals to front" ------------------------------------
+    // Every surface has its own independent normal (so the stack can be
+    // wedged), but most of the time every surface should just share the
+    // front surface's orientation — this copies normal_0 into every other
+    // normal_i field instead of making the user edit each one by hand.
+    form.innerHTML += `
+      <div class="param-section-title">Wedge Helper</div>
+      <div style="font-size:0.62rem;color:var(--text3);margin-bottom:6px;line-height:1.5;padding:0 2px">
+        Each surface's normal is independent, so any interface can be
+        wedged relative to the others. If you don't need a wedge, use this
+        to keep every surface aligned with the front surface (N₀).
+      </div>
+      <button type="button" class="param-apply" id="substrate-match-normals"
+              style="background:var(--bg3,#2a2a32);color:var(--text2,#ccc);margin-bottom:14px">
+        ⇩ Match all normals to front (N₀)
+      </button>
+    `;
+
+    document.getElementById('substrate-match-normals')?.addEventListener('click', () => {
+      const nx = form.querySelector('[id="pi_normal_0_x"]');
+      const ny = form.querySelector('[id="pi_normal_0_y"]');
+      const nz = form.querySelector('[id="pi_normal_0_z"]');
+      if (!nx || !ny || !nz) return;
+      const vx = parseFloat(nx.value) || 0;
+      const vy = parseFloat(ny.value) || 0;
+      const vz = parseFloat(nz.value) || 0;
+      for (let i = 1; i <= 8; i++) {
+        const ix = form.querySelector(`[id="pi_normal_${i}_x"]`);
+        const iy = form.querySelector(`[id="pi_normal_${i}_y"]`);
+        const iz = form.querySelector(`[id="pi_normal_${i}_z"]`);
+        if (ix) { ix.value = vx; tempSubstrateParams[`normal_${i}_x`] = vx; }
+        if (iy) { iy.value = vy; tempSubstrateParams[`normal_${i}_y`] = vy; }
+        if (iz) { iz.value = vz; tempSubstrateParams[`normal_${i}_z`] = vz; }
+      }
+    });
+
+    form.querySelectorAll('input.param-input[type="number"]').forEach(input => {
+      input.addEventListener('input', () => {
+        const name = input.id?.replace(/^pi_/, '');
+        if (name) tempSubstrateParams[name] = parseFloat(input.value) || 0;
+        if (name === 'n_elements') updateSubstrateVisibility();
+      });
+    });
+  }
+
+  if (mod.type === 'dielectric_mirror') {
+    // -- Dynamic row visibility (hide rows for unused layers) -------------
+    // Single shared normal (no per-surface wedging), so only the per-layer
+    // t_i/n_i/k_i/nk_mode_i/lnk_data_i rows need hiding, exactly like
+    // CompoundLens's element rows but without the R_i radii.
+    function updateLayerVisibility() {
+      const N = Math.max(1, Math.min(16, parseInt(
+        form.querySelector('[id="pi_n_layers"]')?.value ?? mod.params.n_layers ?? 2
+      )));
+      for (let i = 1; i <= 16; i++) {
+        ['t_', 'n_', 'k_'].forEach(prefix => {
+          const el = form.querySelector(`[id="pi_${prefix}${i}"]`)?.closest('.param-row');
+          if (el) el.style.display = (i <= N) ? '' : 'none';
+        });
+        ['nk_mode_', 'lnk_data_'].forEach(prefix => {
+          const el = form.querySelector(`[id="pi_${prefix}${i}"]`)
+            ?.closest('.param-row, [style*="margin-bottom"]');
+          if (el) el.style.display = (i <= N) ? '' : 'none';
+        });
+      }
+    }
+
+    updateLayerVisibility();
+
+    form.querySelectorAll('input.param-input[type="number"]').forEach(input => {
+      input.addEventListener('input', () => {
+        const name = input.id?.replace(/^pi_/, '');
+        if (name === 'n_layers') updateLayerVisibility();
+      });
+    });
+  }
+
+  if (mod.type === 'gradient_medium') {
+    tempGradientParams = {...mod.params};
+
+    form.innerHTML += `
+      <div class="param-section-title">Density Profile Preview</div>
+      <div class="routing-box" style="padding:10px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+          <span style="font-size:0.6rem;color:var(--cyan);letter-spacing:.05em;text-transform:uppercase;font-weight:600" id="gm-mode-label">-</span>
+          <span style="font-size:0.62rem;color:var(--text2)" id="gm-peak-label">-</span>
+        </div>
+        <canvas id="gm-canvas" width="480" height="200"
+          style="width:100%;height:auto;display:block;border-radius:6px;background:var(--bg2);border:1px solid var(--border)"></canvas>
+        <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:0.6rem;color:var(--text3)" id="gm-axis-info"></div>
+        <div id="gm-note" style="margin-top:6px;font-size:0.6rem;color:var(--text3);line-height:1.5"></div>
+      </div>
+    `;
+
+    // Show/hide param rows relevant to the selected gradient_mode
+    updateGradientVisibility(form, tempGradientParams.gradient_mode || '1D exp');
+    drawGradientPreview();
+
+    // Live-update on every input/select change in the form
+    form.querySelectorAll('.param-input, .param-select').forEach(input => {
+      const evt = (input.tagName === 'SELECT' || input.type === 'checkbox') ? 'change' : 'input';
+      input.addEventListener(evt, () => {
+        const name = input.id?.replace(/^pi_/, '');
+        if (!name || !tempGradientParams) return;
+        if (input.type === 'checkbox') {
+          tempGradientParams[name] = input.checked;
+        } else if (input.tagName === 'SELECT') {
+          tempGradientParams[name] = input.value;
+        } else {
+          tempGradientParams[name] = parseFloat(input.value);
+        }
+        if (name === 'gradient_mode') updateGradientVisibility(form, input.value);
+        drawGradientPreview();
+      });
+    });
+  }
+}
+
+function groupParams(params) {
+  const map = new Map();
+  for (const ps of params) {
+    const match = ps.name.match(/^(.*)_(x|y|z)$/);
+    if (match) {
+      const base = match[1];
+      if (!map.has(base)) map.set(base, []);
+      map.get(base).push(ps);
+    } else {map.set(ps.name, [ps]);}
+  }
+
+  const groups = [];
+
+  for (const [_, arr] of map) {
+    // ensure correct order x y z
+    arr.sort((a, b) => {
+      const order = { x: 0, y: 1, z: 2 };
+      const ax = a.name.split('_').pop();
+      const bx = b.name.split('_').pop();
+      return order[ax] - order[bx];
+    });
+
+    groups.push(arr);
+  }
+
+  return groups;
+}
+
+// Render a branch <select> that includes existing branches + "New Branch" option
+function renderBranchSelect(id, current, branches) {
+  const nextB = nextBranchId();
+  // Include NEW_BRANCH sentinel in options
+  const allOpts = [...branches, NEW_BRANCH];
+  const col = current === NEW_BRANCH ? '#a855f7' : branchColor(current);
+  const badge = current === NEW_BRANCH
+    ? `<span class="routing-badge" style="background:#a855f722;color:#a855f7;border:1px solid #a855f744">✦ New ${nextB}</span>`
+    : `<span class="routing-badge" style="background:${col}22;color:${col};border:1px solid ${col}44">${branchLabel(current)}</span>`;
+  return `<select class="routing-select" id="${id}" onchange="refreshRoutingBadge(this)">
+    ${allOpts.map(b => {
+      const label = b === NEW_BRANCH ? `✦ New Branch ${nextB}` : branchLabel(b);
+      return `<option value="${b}"${b===current?' selected':''}>${label}</option>`;
+    }).join('')}
+  </select>${badge}`;
+}
+
+// Live-update the badge colour next to a routing select when user changes it
+function refreshRoutingBadge(sel) {
+  const b = parseInt(sel.value);
+  const badge = sel.nextElementSibling;
+  if (!badge) return;
+  const nextB = nextBranchId();
+  if (b === NEW_BRANCH) {
+    badge.style.background = '#a855f722'; badge.style.color = '#a855f7';
+    badge.style.border = '1px solid #a855f744';
+    badge.textContent = `✦ New ${nextB}`;
+  } else {
+    const col = branchColor(b);
+    badge.style.background = col+'22'; badge.style.color = col;
+    badge.style.border = `1px solid ${col}44`;
+    badge.textContent = branchLabel(b);
+  }
+}
+
+// Output routing row for non-BS modules
+function renderOutputRoutingRow(mod) {
+  const obs = mod.output_branches || mod.input_branches || [0];
+  const currentOut = obs[0] ?? 0;
+  const branches = availableBranches();
+  return `<div class="routing-row" style="margin-top:4px">
+    <span style="flex-shrink:0">Output -></span>
+    ${renderBranchSelect('route_out', currentOut, branches)}
+  </div>`;
+}
+
+// Mutual exclusivity: checking a branch as a front input un-checks it as a
+// back input for the same module (and vice versa) - a branch can only ever
+// be one or the other.
+function onSidedRouteCheck(el) {
+  if (!el.checked) return;
+  const otherSide = el.dataset.side === 'front' ? 'back' : 'front';
+  const other = document.getElementById(`route_${otherSide}_${el.value}`);
+  if (other) other.checked = false;
+}
+
+function renderSidedRoutingRows(mod) {
+  const front = mod.input_branches_front || [];
+  const back  = mod.input_branches_back  || [];
+  const obs   = mod.output_branches || [1, 0];
+  const all   = availableBranches();
+  [...obs, ...front, ...back].forEach(b => { if (b >= 0 && !all.includes(b)) all.push(b); });
+  all.sort((a, b) => a - b);
+
+  const checkGroup = (label, side, ids) => `
+    <div class="routing-row" style="align-items:flex-start;margin-top:8px">
+      <span style="flex-shrink:0;padding-top:2px">${label} in</span>
+      <div class="branch-check-group">
+        ${all.map(b => {
+          const col = branchColor(b);
+          const checked = ids.includes(b);
+          return `<label class="branch-check-row">
+            <input type="checkbox" id="route_${side}_${b}" data-side="${side}" value="${b}"
+                   ${checked ? 'checked' : ''} onchange="onSidedRouteCheck(this)">
+            <div style="width:8px;height:8px;border-radius:50%;background:${col};flex-shrink:0"></div>
+            <span class="branch-check-label">${branchLabel(b)}</span>
+          </label>`;
+        }).join('')}
+      </div>
+    </div>`;
+
+  return `
+    ${checkGroup('Front', 'front', front)}
+    ${checkGroup('Back', 'back', back)}
+    <div class="routing-row" style="margin-top:6px">
+      <span style="flex-shrink:0">↗ Front out -></span>
+      ${renderBranchSelect('route_out_front', obs[0] ?? 1, all)}
+    </div>
+    <div class="routing-row">
+      <span style="flex-shrink:0">↘ Back out -></span>
+      ${renderBranchSelect('route_out_back', obs[1] ?? 0, all)}
+    </div>`;
+}
+
+async function applyRouting() {
+  if (!selectedId) return;
+  const mod = scene.find(m => m.id === selectedId);
+
+  // Resolve output branches; NEW_BRANCH (-1) gets the next available id.
+  // Careful: if multiple outputs request a new branch, hand out sequential ids.
+  let usedNext = nextBranchId();
+  function resolveB(raw) {
+    if (raw === NEW_BRANCH) return usedNext++;
+    return raw;
+  }
+
+  if (isSplitModule(mod.type)) {
+    const frontIds = [...document.querySelectorAll('[data-side="front"]')]
+      .filter(cb => cb.checked).map(cb => parseInt(cb.value));
+    const backIds = [...document.querySelectorAll('[data-side="back"]')]
+      .filter(cb => cb.checked).map(cb => parseInt(cb.value));
+
+    const fEl = document.getElementById('route_out_front');
+    const bEl = document.getElementById('route_out_back');
+    const obs = [resolveB(parseInt(fEl.value)), resolveB(parseInt(bEl.value))];
+
+    const res = await api('/scene/routing', 'POST', {
+      id: selectedId,
+      input_branches_front: frontIds,
+      input_branches_back: backIds,
+      output_branches: obs,
+    });
+    if (res.ok) {
+      scene = res.scene;
+      renderPipeline();
+      renderParams();
+      setStatus('Routing updated', 'ready');
+    }
+    return;
+  }
+
+  const ibEl = document.getElementById('route_input');
+  if (!ibEl) return;
+  const primaryBranch = parseInt(ibEl.value);
+  const outEl = document.getElementById('route_out');
+  const obs = outEl ? [resolveB(parseInt(outEl.value))] : null;
+
+  const res = await api('/scene/routing', 'POST', {
+    id: selectedId,
+    input_branches: [primaryBranch],
+    output_branches: obs,
+  });
+  if (res.ok) {
+    scene = res.scene;
+    renderPipeline();
+    renderParams();
+    setStatus('Routing updated', 'ready');
+  }
+}
+
+function renderParamInput(spec, values) {
+  const val = values[spec.name] ?? spec.default;
+  let input = '';
+  if (spec.type === 'select') {
+    input = `<select class="param-select" id="pi_${spec.name}">
+      ${spec.options.map(o => `<option value="${o}"${o==val?' selected':''}>${o}</option>`).join('')}
+    </select>`;
+  } else if (spec.type === 'bool') {
+    input = `<label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+      <input type="checkbox" class="param-input" id="pi_${spec.name}" ${val?'checked':''}>
+      <span style="font-size:0.72rem;color:var(--text2)">${val?'Enabled':'Disabled'}</span>
+    </label>`;
+  } else if (spec.type === 'float' || spec.type === 'int') {
+    input = `<input type="number" class="param-input" id="pi_${spec.name}"
+      value="${val}"
+      ${spec.min!=null?`min="${spec.min}"`:''}
+      ${spec.max!=null?`max="${spec.max}"`:''}
+      step="${spec.type==='int'?1:'any'}">`;
+  } else if (spec.type === 'json_blob') {
+    // Special file-upload widget for UploadPhotons
+    const hasData = val && val.length > 10;
+    let summary = '';
+    if (hasData) {
+      try {
+        const p = JSON.parse(val);
+        const info = p.info || p;
+        const n = (info.detected || []).length;
+        const pos = info.position || [0,0,0];
+        summary = `<div style="margin-top:4px;padding:5px 8px;background:var(--bg3);border-radius:5px;border:1px solid var(--border);font-size:0.64rem;color:var(--green);">
+          ✓ ${n} photon${n!==1?'s':''} loaded&nbsp;&nbsp;<span style="color:var(--text3);">det @ [${pos.map(v=>parseFloat(v).toExponential(2)).join(', ')}]</span></div>`;
+      } catch(e) {
+        summary = `<div style="margin-top:4px;padding:4px 8px;background:var(--bg3);border-radius:5px;border:1px solid var(--red);font-size:0.64rem;color:var(--red);">⚠ Invalid JSON</div>`;
+      }
+    } else {
+      summary = `<div style="margin-top:4px;padding:5px 8px;background:var(--bg3);border-radius:5px;border:1px solid var(--border);font-size:0.64rem;color:var(--text3);">No file loaded yet</div>`;
+    }
+    input = `<div style="display:flex;flex-direction:column;gap:0;width:100%">
+      <button onclick="uploadPhotonFile('${spec.name}')"
+        style="height:28px;width:100%;border-radius:5px;border:1px dashed var(--border2);
+               background:var(--bg2);color:var(--text2);font-family:inherit;font-size:0.68rem;
+               cursor:pointer;transition:all 0.15s;"
+        onmouseover="this.style.borderColor='var(--purple)';this.style.color='var(--purple)'"
+        onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
+        📂 Load detector .json ...
+      </button>
+      ${summary}
+      <input type="hidden" id="pi_${spec.name}" value="${val ? encodeURIComponent(val) : ''}">
+    </div>`;
+  } else if (spec.type === 'lnk_table') {
+    // -- lnk table upload widget ------------------
+    // val is either [] (no data) or an Array of [wl_um, n, k] rows
+    const rows = Array.isArray(val) ? val : (val ? JSON.parse(val) : []);
+    let lnkSummary = '';
+    if (rows.length > 0) {
+      const wlLo  = rows[0][0].toFixed(4);
+      const wlHi  = rows[rows.length-1][0].toFixed(4);
+      const nLo   = rows[0][1].toFixed(4);
+      const nHi   = rows[rows.length-1][1].toFixed(4);
+      lnkSummary = `<div style="margin-top:4px;padding:5px 8px;background:var(--bg3);border-radius:5px;border:1px solid var(--green)44;font-size:0.62rem;line-height:1.6;">
+        <span style="color:var(--green)">✓ ${rows.length} pts</span>
+        <span style="color:var(--text3)"> * λ ${wlLo}–${wlHi} µm</span><br>
+        <span style="color:var(--text2)">n: ${nLo}...${nHi}</span>
+      </div>`;
+    } else {
+      lnkSummary = `<div style="margin-top:4px;padding:5px 8px;background:var(--bg3);border-radius:5px;border:1px solid var(--border);font-size:0.62rem;color:var(--text3);">No table loaded - using manual n/k</div>`;
+    }
+    // Store rows as JSON in a hidden textarea
+    const encoded = encodeURIComponent(JSON.stringify(rows));
+    input = `<div style="display:flex;flex-direction:column;gap:0;width:100%">
+      <button onclick="uploadLnkFile('${spec.name}')"
+        style="height:28px;width:100%;border-radius:5px;border:1px dashed var(--border2);
+               background:var(--bg2);color:var(--cyan);font-family:inherit;font-size:0.68rem;
+               cursor:pointer;transition:all 0.15s;"
+        onmouseover="this.style.borderColor='var(--cyan)';this.style.color='var(--cyan)'"
+        onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--cyan)'">
+        🔬 Upload lnk table ...
+      </button>
+      ${lnkSummary}
+      <input type="hidden" id="pi_${spec.name}" value="${encoded}">
+    </div>`;
+  } else {
+    input = `<input type="text" class="param-input" id="pi_${spec.name}" value="${val}">`;
+  }
+  const unit    = spec.unit    ? `<span class="param-unit">${spec.unit}</span>` : '';
+  const tooltip = spec.tooltip ? `title="${spec.tooltip}"` : '';
+  return `<div class="param-cell" ${tooltip}>
+    <div class="param-label"><span>${spec.label}</span>${unit}</div>
+    ${input}
+  </div>`;
+}
+
+async function applyParams() {
+  if (!selectedId) return;
+  const mod = scene.find(m => m.id === selectedId);
+  const cat = catalog.find(c => c.type === mod.type);
+  const params = {};
+  cat.params.forEach(spec => {
+    const el = document.getElementById(`pi_${spec.name}`);
+    if (!el) return;
+    if (spec.type === 'bool')        params[spec.name] = el.checked;
+    else if (spec.type === 'int')    params[spec.name] = parseInt(el.value);
+    else if (spec.type === 'float')  params[spec.name] = parseFloat(el.value);
+    else if (spec.type === 'select') params[spec.name] = el.value;
+    else if (spec.type === 'json_blob') params[spec.name] = el.value ? decodeURIComponent(el.value) : '';
+    else if (spec.type === 'lnk_table') {
+      // Stored as URI-encoded JSON array of [wl_um, n, k] rows
+      try { params[spec.name] = el.value ? JSON.parse(decodeURIComponent(el.value)) : []; }
+      catch(e) { params[spec.name] = []; }
+    }
+    else                             params[spec.name] = el.value;
+  });
+  const res = await api('/scene/update', 'POST', {id: selectedId, params});
+  if (res.ok) {
+    scene = res.scene;
+    renderPipeline();
+    
+    if (mod.type === 'parabolic_mirror') {
+      const derived = calcParabolicDerived(mod.params);
+      document.getElementById('derived-d').textContent = `${fmtSI(derived.d)} m`;
+      document.getElementById('derived-theta').textContent = `${derived.theta_deg.toFixed(2)}°`;
+    }
+    setStatus('Parameters updated', 'ready');
+
+    if (autoRunEnabled) {
+      await runTrace();
+    }
+  }
+}
+
+// -- Upload photons file picker ------─
+function uploadPhotonFile(paramName) {
+  const inp = document.createElement('input');
+  inp.type   = 'file';
+  inp.accept = '.json,application/json';
+  inp.onchange = async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const text = await file.text();
+    // Validate JSON immediately so we can show a useful error
+    try { JSON.parse(text); } catch(err) {
+      setStatus('Invalid JSON file: ' + err.message, 'error'); return;
+    }
+    // Store in the hidden input (URI-encoded to avoid breaking HTML attribute)
+    const hidden = document.getElementById(`pi_${paramName}`);
+    if (hidden) hidden.value = encodeURIComponent(text);
+    // Auto-apply so the user doesn't have to click "Apply Parameters"
+    await applyParams();
+    // Re-render so the summary badge updates
+    renderParams();
+    setStatus('Photon data loaded - ' + file.name, 'ready');
+  };
+  inp.click();
+}
+
+// -- Upload lnk table file picker ----
+function uploadLnkFile(paramName) {
+  const inp = document.createElement('input');
+  inp.type   = 'file';
+  inp.accept = '.txt,.csv,.lnk,text/plain';
+  inp.onchange = async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const text = await file.text();
+
+    // Parse the two-block lnk format into [wl_um, n, k] rows
+    let rows;
+    try {
+      rows = parseLnkText(text);
+    } catch(err) {
+      setStatus('lnk parse error: ' + err.message, 'error');
+      return;
+    }
+    if (!rows.length) {
+      setStatus('No data found in lnk file', 'error');
+      return;
+    }
+
+    const hidden = document.getElementById(`pi_${paramName}`);
+    if (hidden) hidden.value = encodeURIComponent(JSON.stringify(rows));
+
+    // Auto-apply then re-render so the summary badge updates
+    await applyParams();
+    renderParams();
+    setStatus(`lnk table loaded - ${rows.length} points (${file.name})`, 'ready');
+  };
+  inp.click();
+}
+
+/**
+ * Parse a two-block lnk text file into an array of [wl_um, n, k] rows.
+ *
+ * Handles the format used in the project:
+ *   wl   n         ← first block header
+ *   0.38  1.45
+ *   ...
+ *   wl   k         ← second block header
+ *   0.38  0.0
+ *   ...
+ *
+ * Both blocks are merged on a unified wavelength axis via linear interpolation
+ * so that every row contains all three values.
+ */
+function parseLnkText(text) {
+  const nData = {};  // wl_um -> n
+  const kData = {};  // wl_um -> k
+  let current = null;
+
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) continue;
+    const low = line.toLowerCase();
+    if (/^wl\s+n\b/.test(low)) { current = nData; continue; }
+    if (/^wl\s+k\b/.test(low)) { current = kData; continue; }
+
+    const parts = line.split(/[\s,;]+/);
+    if (parts.length >= 2) {
+      const wl = parseFloat(parts[0]);
+      const v  = parseFloat(parts[1]);
+      if (!isNaN(wl) && !isNaN(v) && current !== null) {
+        current[wl] = v;
+      }
+    }
+  }
+
+  if (!Object.keys(nData).length && !Object.keys(kData).length) {
+    throw new Error('No valid data blocks found.');
+  }
+
+  // Build unified sorted wavelength list
+  const allWl = [...new Set([
+    ...Object.keys(nData).map(Number),
+    ...Object.keys(kData).map(Number),
+  ])].sort((a, b) => a - b);
+
+  // Linear interpolation helper
+  function interp(wlArr, vMap, wl) {
+    if (wlArr.length === 0) return 0;
+    if (wl <= wlArr[0])  return vMap[wlArr[0]];
+    if (wl >= wlArr[wlArr.length-1]) return vMap[wlArr[wlArr.length-1]];
+    let lo = 0, hi = wlArr.length - 1;
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1;
+      if (wlArr[mid] <= wl) lo = mid; else hi = mid;
+    }
+    const t = (wl - wlArr[lo]) / (wlArr[hi] - wlArr[lo]);
+    return vMap[wlArr[lo]] + t * (vMap[wlArr[hi]] - vMap[wlArr[lo]]);
+  }
+
+  const nWl = Object.keys(nData).map(Number).sort((a,b)=>a-b);
+  const kWl = Object.keys(kData).map(Number).sort((a,b)=>a-b);
+
+  return allWl.map(wl => [
+    wl,
+    Object.prototype.hasOwnProperty.call(nData, wl) ? nData[wl] : interp(nWl, nData, wl),
+    Object.prototype.hasOwnProperty.call(kData, wl) ? kData[wl] : interp(kWl, kData, wl),
+  ]);
+}
+
+// --------------------------------------------------------
+// Run trace
+// --------------------------------------------------------
+async function runTrace() {
+  if (scene.length === 0) { setStatus('Add modules first', 'error'); return; }
+  setStatus('Tracing...', 'busy');
+  document.getElementById('btn-run').disabled = true;
+  document.querySelectorAll('.pipe-card').forEach(c => c.classList.add('running'));
+
+  try {
+    const res = await api('/scene/run', 'POST');
+    if (res.ok) {
+      lastResult = res.result;
+      renderResults(res.result);
+      drawRays(res.result);
+      preparePulses(res.result);
+      const nPh = res.result.photons_final?.length ?? 0;
+      setStatus(`Trace complete - ${nPh} photon${nPh!==1?'s':''} at output`, 'ready');
+      document.getElementById('status-photons').textContent =
+        `${res.result.n_modules} modules * ${nPh} output photons`;
+      //activateTab('results');
+    } else {
+      setStatus('Trace error: ' + res.error, 'error');
+      console.error(res.traceback);
+    }
+  } catch(e) {
+    setStatus('Network error: ' + e.message, 'error');
+  }
+  document.querySelectorAll('.pipe-card').forEach(c => c.classList.remove('running'));
+  document.getElementById('btn-run').disabled = false;
+}
+
+// --------------------------------------------------------
+// Results panel
+// --------------------------------------------------------
+function renderResults(result) {
+  document.getElementById('results-empty').style.display = 'none';
+  const content = document.getElementById('results-content');
+  content.style.display = 'block';
+
+  let html = '';
+  result.steps.forEach(step => {
+    const ok  = !step.info?.error;
+    const ibs = step.input_branches || [step.input_branch ?? 0];
+    const obs = step.output_branches ?? ibs;
+    const col = branchColor(ibs[0]);
+    // Show multiple input branch badges for recombining BS
+    const ibBadges = ibs.map(b => {
+      const c = branchColor(b);
+      return `<span style="font-size:0.58rem;padding:1px 5px;border-radius:8px;background:${c}22;color:${c};border:1px solid ${c}44">${branchLabel(b)}</span>`;
+    }).join('');
+    const hasPhotonsOut = step.photons_out?.length > 0;
+    const downloadBtns = hasPhotonsOut ? `
+      <div style="display:flex;flex-wrap:wrap;gap:4px" title="Download this module's output photons">
+        <button onclick="event.stopPropagation();downloadStepPhotonsTxt('${step.module_id}')"
+          style="height:20px;padding:0 7px;border-radius:5px;border:1px solid var(--border2);
+                 background:var(--bg2);color:var(--text2);font-family:inherit;font-size:0.6rem;
+                 cursor:pointer;display:flex;align-items:center;white-space:nowrap;transition:all 0.15s;"
+          onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+          onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
+          ⬇ .txt
+        </button>
+        <button onclick="event.stopPropagation();downloadStepPhotonsJson('${step.module_id}')"
+          style="height:20px;padding:0 7px;border-radius:5px;border:1px solid var(--border2);
+                 background:var(--bg2);color:var(--text2);font-family:inherit;font-size:0.6rem;
+                 cursor:pointer;display:flex;align-items:center;white-space:nowrap;transition:all 0.15s;"
+          onmouseover="this.style.borderColor='var(--purple)';this.style.color='var(--purple)'"
+          onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
+          ⬇ .json
+        </button>
+      </div>` : '';
+    html += `<div class="result-block">
+      <div class="result-block-header">
+        <div class="result-block-icon" style="background:${getModColor(step.module_type)}22;color:${getModColor(step.module_type)}">${getModIcon(step.module_type)}</div>
+        <div class="result-block-label">${step.module_label}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:3px;margin-right:4px">${ibBadges}</div>
+        <div class="result-block-badge ${ok?'ok':'err'}">${ok?'OK':'ERR'}</div>
+        ${downloadBtns}
+      </div>
+      <div class="result-block-body">
+        ${renderStepInfo(step)}
+      </div>
+    </div>`;
+  });
+
+  if (result.photons_final?.length > 0) {
+    html += `<div class="result-block">
+      <div class="result-block-header">
+        <div class="result-block-icon" style="background:#f5c51822;color:#f5c518">⦿</div>
+        <div class="result-block-label">Final Photons</div>
+        <div class="result-block-badge ok">${result.photons_final.length}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-left:6px">
+        <button onclick="downloadFinalPhotonsTxt()"
+          style="height:24px;padding:0 10px;border-radius:5px;border:1px solid var(--border2);
+                 background:var(--bg2);color:var(--text2);font-family:inherit;font-size:0.65rem;
+                 cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;transition:all 0.15s;"
+          onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+          onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
+          ⬇ .txt
+        </button>
+        <button onclick="downloadFinalPhotonsJson()"
+          style="height:24px;padding:0 10px;border-radius:5px;border:1px solid var(--border2);
+                 background:var(--bg2);color:var(--text2);font-family:inherit;font-size:0.65rem;
+                 cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;transition:all 0.15s;"
+          onmouseover="this.style.borderColor='var(--purple)';this.style.color='var(--purple)'"
+          onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
+          ⬇ .json
+        </button>
+        </div>
+      </div>
+      <div class="result-block-body">${renderPhotonTable(result.photons_final)}</div>
+    </div>`;
+  }
+  content.innerHTML = html;
+}
+
+// Download the final-trace output photons (with every serialised parameter:
+// position, wave-vector, complex E-field, intensity, wavelength, branch) as
+// plain JSON, mirroring downloadDetectorJson().
+function downloadFinalPhotonsJson() {
+  if (!lastResult?.photons_final?.length) return;
+  const now = new Date().toISOString();
+  const payload = {
+    exported_at:   now,
+    n_modules:     lastResult.n_modules,
+    photon_count:  lastResult.photons_final.length,
+    photons_final: lastResult.photons_final,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `final_photons_${now.slice(0,19).replace(/[T:]/g,'_')}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// Same data as a human-readable, fixed-width .txt readout, mirroring
+// downloadDetectorTxt().
+function downloadFinalPhotonsTxt() {
+  if (!lastResult?.photons_final?.length) return;
+  const photons = lastResult.photons_final;
+  const now = new Date().toISOString();
+
+  const sep  = '═'.repeat(60);
+  const sep2 = '─'.repeat(60);
+  const fv  = (v, dec=12) => v.toExponential(dec);
+  const fvc = (v, dec=9)  => (v >= 0 ? '+' : '') + v.toFixed(dec);
+
+  let lines = [];
+  lines.push(sep);
+  lines.push('FINAL OUTPUT PHOTONS');
+  lines.push(sep);
+  lines.push(`exported at:    ${now}`);
+  lines.push(`photon count:   ${photons.length}`);
+  lines.push(sep);
+  lines.push('');
+
+  photons.forEach((p, i) => {
+    const r = p.r || [0,0,0];
+    const k = p.k || [0,0,0];
+    const Er = p.E_real || [0,0,0];
+    const Ei = p.E_imag || [0,0,0];
+
+    lines.push(`PHOTON ${i}`);
+    lines.push(sep2);
+    lines.push(`photon id:          ${p.photon_id ?? 'N/A'}`);
+    lines.push(`branch:             ${branchLabel(p.branch ?? 0)}`);
+    lines.push(`wavelength (nm):    ${p.wavelength_nm != null ? p.wavelength_nm.toFixed(3) : 'N/A'}`);
+    lines.push(`intensity (I):      ${p.I != null ? fv(p.I) : 'N/A'}`);
+    lines.push('');
+    lines.push('r - photon position (m)');
+    lines.push(`x: ${fv(r[0])}`);
+    lines.push(`y: ${fv(r[1])}`);
+    lines.push(`z: ${fv(r[2])}`);
+    lines.push('');
+    lines.push('k - wave-vector (rad/m)');
+    lines.push(`x: ${fv(k[0])}`);
+    lines.push(`y: ${fv(k[1])}`);
+    lines.push(`z: ${fv(k[2])}`);
+    lines.push('');
+    lines.push('E - electric field (complex, normalised)');
+    lines.push('          Re                  Im');
+    const ef = (v) => (v != null ? fvc(v, 9) : '+0.000000000').padStart(18);
+    lines.push(`x:  ${ef(Er[0])}  ${ef(Ei[0])}`);
+    lines.push(`y:  ${ef(Er[1])}  ${ef(Ei[1])}`);
+    lines.push(`z:  ${ef(Er[2])}  ${ef(Ei[2])}`);
+    if (i < photons.length - 1) lines.push(sep2);
+    lines.push('');
+  });
+
+  lines.push(sep);
+  lines.push('END');
+  lines.push(sep);
+
+  const text = lines.join('\n');
+  const blob = new Blob([text], {type: 'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `final_photons_${now.slice(0,19).replace(/[T:]/g,'_')}.txt`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function renderStepInfo(step) {
+  const info = step.info || {};
+
+  // -- Detector: full-precision photon readout --------------------
+  if (step.module_type === 'detector') {
+    return renderDetectorInfo(step, info);
+  }
+
+  let rows = `<div class="result-kv"><span class="result-k">in -> out</span><span class="result-v accent">${step.n_in} -> ${step.n_out}</span></div>`;
+  if (info.material)     rows += kv('Material', info.material);
+  if (info.n != null)    rows += kv('n', info.n.toFixed(4));
+  if (info.k != null)    rows += kv('k (ext.)', info.k.toFixed(4));
+  if (info.focal_length) rows += kv('f', fmtSI(info.focal_length)+'m');
+  if (info.distance)     rows += kv('Δz', fmtSI(info.distance)+'m');
+  if (info.n_generated)  rows += kv('Generated', info.n_generated+' photons');
+  if (info.reflections?.length > 0) {
+    const r0 = info.reflections[0];
+    if (r0.theta_i_deg != null) rows += kv('θᵢ', r0.theta_i_deg.toFixed(2)+'°');
+    if (r0.R != null)           rows += kv('R', (r0.R*100).toFixed(2)+'%');
+  }
+  // -- Compound lens ----------------
+  if (step.module_type === 'compound_lens') {
+    const N = info.n_elements ?? '?';
+    rows += kv('Elements', N);
+
+    if (info.efl != null)
+      rows += `<div class="result-kv"><span class="result-k">EFL</span><span class="result-v ${info.efl>0?'accent':'amber'}">${fmtSI(info.efl)} m</span></div>`;
+    if (info.ffl != null)  rows += kv('FFL', fmtSI(info.ffl) + ' m');
+    if (info.bfl != null)  rows += kv('BFL', fmtSI(info.bfl) + ' m');
+    if (info.h1  != null)  rows += kv('H₁',  fmtSI(info.h1)  + ' m');
+    if (info.h2  != null)  rows += kv('H₂',  fmtSI(info.h2)  + ' m');
+    if (info.n_blocked > 0)
+      rows += kv('Blocked', info.n_blocked + ' ray' + (info.n_blocked !== 1 ? 's' : ''));
+    if (info.thicknesses_used?.length)
+      info.thicknesses_used.forEach((t, i) =>
+        rows += kv(`t${i+1}`, fmtSI(t) + ' m'));
+  }
+
+  // -- Substrate --------------------
+  if (step.module_type === 'substrate') {
+    const N = info.n_elements ?? '?';
+    rows += kv('Elements', N);
+    if (info.n_blocked > 0)
+      rows += kv('Blocked', info.n_blocked + ' ray' + (info.n_blocked !== 1 ? 's' : ''));
+    // Report the actual (possibly wedge-clamped) thickness used for each
+    // element, not just the raw slider value, so it's obvious when a
+    // requested thickness was too thin to keep wedged front/back surfaces
+    // from cutting through each other and got clamped up to the geometric
+    // minimum instead.
+    if (info.thicknesses_used?.length)
+      info.thicknesses_used.forEach((t, i) => {
+        const tMin = info.t_mins?.[i];
+        const clamped = tMin != null && tMin > 1e-12 && Math.abs(t - tMin) <= 1e-12;
+        rows += kv(`t${i+1}`, fmtSI(t) + ' m' + (clamped ? ' (clamped to min)' : ''));
+      });
+  }
+  return rows;
+}
+
+// -- Detector readout ------
+function renderDetectorInfo(step, info) {
+  const detected = info.detected || [];
+  const pos  = info.position || [0,0,0];
+  const norm = info.normal   || [0,0,1];
+  const lbl  = info.detector_label ? `<strong>${info.detector_label}</strong> * ` : '';
+  // Embed data as JSON in a data attribute so the download button can access it without globals
+  const dataAttr = encodeURIComponent(JSON.stringify({info, module_id: step.module_id, module_label: step.module_label}));
+
+  let html = '';
+  html += `<div class="result-kv">
+    <span class="result-k">Hits</span>
+    <span class="result-v accent">${detected.length}</span>
+  </div>`;
+  html += `<div class="result-kv" style="font-size:0.61rem">
+    <span class="result-k">Position</span>
+    <span class="result-v muted">[${pos.map(v=>v.toPrecision(5)).join(', ')}] m</span>
+  </div>`;
+  html += `<div class="result-kv" style="font-size:0.61rem;margin-bottom:8px">
+    <span class="result-k">Normal</span>
+    <span class="result-v muted">[${norm.map(v=>v.toPrecision(4)).join(', ')}]</span>
+  </div>`;
+
+  if (detected.length === 0) {
+    html += `<div style="color:var(--text3);font-size:0.72rem;text-align:center;padding:8px 0">No photons detected</div>`;
+    return html;
+  }
+
+  html += `<div class="detector-readout">`;
+  html += `<div style="display:flex;align-items:center;margin-bottom:6px;">
+    <div class="detector-readout-title" style="margin-bottom:0;flex:1;border-bottom:none">Photon data at detector plane</div>
+    <div style="display:flex;gap:5px">
+    <button onclick="downloadDetectorTxt(decodeURIComponent('${dataAttr}'))"
+      style="height:24px;padding:0 10px;border-radius:5px;border:1px solid var(--border2);
+             background:var(--bg2);color:var(--text2);font-family:inherit;font-size:0.65rem;
+             cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;transition:all 0.15s;"
+      onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+      onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
+      ⬇ .txt
+    </button>
+    <button onclick="downloadDetectorJson(decodeURIComponent('${dataAttr}'))"
+      style="height:24px;padding:0 10px;border-radius:5px;border:1px solid var(--border2);
+             background:var(--bg2);color:var(--text2);font-family:inherit;font-size:0.65rem;
+             cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;transition:all 0.15s;"
+      onmouseover="this.style.borderColor='var(--purple)';this.style.color='var(--purple)'"
+      onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
+      ⬇ .json
+    </button>
+    </div>
+  </div>
+  <div style="border-bottom:1px solid var(--border);margin-bottom:8px"></div>`;
+
+  detected.forEach((d, i) => {
+    const E = d.E || {};
+    const r = d.r || d.hit_position || [0,0,0];
+    const k = d.k || [0,0,0];
+
+    // Helper: format number with sign, fixed decimals
+    const fp = (v, dec=9) => (v >= 0 ? '+' : '') + v.toFixed(dec);
+    const fe = (v, dec=6) => (v >= 0 ? '+' : '') + v.toFixed(dec);
+
+    // Classify near-zero for visual dimming
+    const isZero = v => Math.abs(v) < 1e-9;
+    const cls = v => isZero(v) ? 'det-e-val zero' : 'det-e-val';
+    const phCls = v => isZero(v) ? 'det-e-val phase zero' : 'det-e-val phase';
+    const ampCls = v => isZero(v) ? 'det-e-val amp zero' : 'det-e-val amp';
+
+    html += `<div class="detector-photon-card">
+      <div class="detector-photon-header">
+        <div class="detector-photon-idx">${i}</div>
+        <div class="detector-photon-meta">
+          ${lbl}λ=${d.wavelength_nm ? d.wavelength_nm.toFixed(1) : '?'} nm
+          * time=${d.time_traveled != null ? d.time_traveled.toExponential(4) : '?'} s
+        </div>
+        <div class="detector-photon-I">I = ${d.I != null ? d.I.toPrecision(6) : '?'}</div>
+      </div>
+      <div class="detector-photon-body">
+
+        <!-- Hit position -->
+        <div class="det-section">
+          <div class="det-section-label">Hit position (m)</div>
+          <div class="det-hit-pos">[${r.map(v => v.toExponential(6)).join(',  ')}]</div>
+        </div>
+
+        <!-- r vector -->
+        <div class="det-section">
+          <div class="det-section-label">r - photon position (m)</div>
+          <div class="det-vec-row"><span class="det-vec-axis">x</span><span class="det-vec-val">${r[0].toExponential(9)}</span></div>
+          <div class="det-vec-row"><span class="det-vec-axis">y</span><span class="det-vec-val">${r[1].toExponential(9)}</span></div>
+          <div class="det-vec-row"><span class="det-vec-axis">z</span><span class="det-vec-val">${r[2].toExponential(9)}</span></div>
+        </div>
+
+        <!-- k vector -->
+        <div class="det-section">
+          <div class="det-section-label">k - wave-vector (rad/m)</div>
+          <div class="det-vec-row"><span class="det-vec-axis">x</span><span class="det-vec-val">${k[0].toExponential(9)}</span></div>
+          <div class="det-vec-row"><span class="det-vec-axis">y</span><span class="det-vec-val">${k[1].toExponential(9)}</span></div>
+          <div class="det-vec-row"><span class="det-vec-axis">z</span><span class="det-vec-val">${k[2].toExponential(9)}</span></div>
+        </div>
+
+        <!-- E field -->
+        <div class="det-section">
+          <div class="det-section-label">E - electric field (complex, normalised)</div>
+          <div class="det-e-grid">
+            <div></div>
+            <div class="det-e-header">Re</div>
+            <div class="det-e-header">Im</div>
+            <div class="det-e-header" style="color:var(--cyan)">|E|</div>
+            <div class="det-e-header" style="color:var(--purple)">φ (rad)</div>
+
+            <div class="det-e-axis">x</div>
+            <div class="${cls(E.x_real)}">${fe(E.x_real ?? 0)}</div>
+            <div class="${cls(E.x_imag)}">${fe(E.x_imag ?? 0)}</div>
+            <div class="${ampCls(E.x_amp)}">${(E.x_amp ?? 0).toFixed(6)}</div>
+            <div class="${phCls(E.x_phase)}">${fe(E.x_phase ?? 0, 6)}</div>
+
+            <div class="det-e-axis">y</div>
+            <div class="${cls(E.y_real)}">${fe(E.y_real ?? 0)}</div>
+            <div class="${cls(E.y_imag)}">${fe(E.y_imag ?? 0)}</div>
+            <div class="${ampCls(E.y_amp)}">${(E.y_amp ?? 0).toFixed(6)}</div>
+            <div class="${phCls(E.y_phase)}">${fe(E.y_phase ?? 0, 6)}</div>
+
+            <div class="det-e-axis">z</div>
+            <div class="${cls(E.z_real)}">${fe(E.z_real ?? 0)}</div>
+            <div class="${cls(E.z_imag)}">${fe(E.z_imag ?? 0)}</div>
+            <div class="${ampCls(E.z_amp)}">${(E.z_amp ?? 0).toFixed(6)}</div>
+            <div class="${phCls(E.z_phase)}">${fe(E.z_phase ?? 0, 6)}</div>
+          </div>
+        </div>
+
+      </div>
+    </div>`;
+  });
+
+  html += `</div>`; // .detector-readout
+  return html;
+}
+
+function downloadDetectorTxt(jsonStr) {
+  const {info, module_id, module_label} = JSON.parse(jsonStr);
+  const detected = info.detected || [];
+  const pos  = info.position || [0,0,0];
+  const norm = info.normal   || [0,0,1];
+  const lbl  = info.detector_label || '';
+  const now  = new Date().toISOString();
+
+  const sep  = '═'.repeat(60);
+  const sep2 = '─'.repeat(60);
+  const fv   = (v, dec=12) => v.toExponential(dec);
+  const fvc  = (v, dec=9)  => (v >= 0 ? '+' : '') + v.toFixed(dec);
+
+  let lines = [];
+  lines.push(sep);
+  lines.push('PHOTON DETECTOR');
+  lines.push(sep);
+  lines.push(`detector label: ${lbl || '(none)'}`);
+  lines.push(`exported at:    ${now}`);
+  lines.push(`position (m):   [${pos.map(v=>fv(v,9)).join('  ')}]`);
+  lines.push(`normal:         [${norm.map(v=>fvc(v,9)).join('  ')}]`);
+  lines.push(`photon count:   ${detected.length}`);
+  lines.push(sep);
+  lines.push('');
+
+  detected.forEach((d, i) => {
+    const E = d.E || {};
+    const r = d.r || d.hit_position || [0,0,0];
+    const k = d.k || [0,0,0];
+
+    lines.push(`PHOTON ${i}`);
+    lines.push(sep2);
+    lines.push(`wavelength (nm):    ${d.wavelength_nm != null ? d.wavelength_nm.toFixed(3) : 'N/A'}`);
+    lines.push(`intensity (I):      ${d.I != null ? fv(d.I) : 'N/A'}`);
+    lines.push(`time traveled:  ${d.time_traveled != null ? fv(d.time_traveled) : 'N/A'} s`);
+    lines.push('');
+    lines.push('r - hit position at detector plane (m)');
+    lines.push(`x: ${fv(r[0])}`);
+    lines.push(`y: ${fv(r[1])}`);
+    lines.push(`z: ${fv(r[2])}`);
+    lines.push('');
+    lines.push('k - wave-vector (rad/m)');
+    lines.push(`x: ${fv(k[0])}`);
+    lines.push(`y: ${fv(k[1])}`);
+    lines.push(`z: ${fv(k[2])}`);
+    lines.push('');
+    lines.push('E - electric field (complex, normalised)');
+    lines.push('          Re                  Im                  |E|                 phase (rad)');
+    const ef = (v) => (v != null ? fvc(v, 9) : '+0.000000000').padStart(18);
+    const ea = (v) => (v != null ? v.toFixed(9) : '0.000000000').padStart(18);
+    lines.push(`x:  ${ef(E.x_real)}  ${ef(E.x_imag)}  ${ea(E.x_amp)}  ${ef(E.x_phase)}`);
+    lines.push(`y:  ${ef(E.y_real)}  ${ef(E.y_imag)}  ${ea(E.y_amp)}  ${ef(E.y_phase)}`);
+    lines.push(`z:  ${ef(E.z_real)}  ${ef(E.z_imag)}  ${ea(E.z_amp)}  ${ef(E.z_phase)}`);
+    if (i < detected.length - 1) lines.push(sep2);
+    lines.push('');
+  });
+
+  lines.push(sep);
+  lines.push('END');
+  lines.push(sep);
+
+  const text = lines.join('\n');
+  const blob = new Blob([text], {type: 'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const safeLbl = (lbl || module_id).replace(/[^a-z0-9_-]/gi, '_');
+  a.download = `detector_${safeLbl}_${now.slice(0,19).replace(/[T:]/g,'_')}.txt`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function downloadDetectorJson(jsonStr) {
+  const {info, module_id, module_label} = JSON.parse(jsonStr);
+  const now = new Date().toISOString();
+  const lbl = info.detector_label || '';
+  // Package in the wrapped format UploadPhotons expects
+  const payload = { exported_at: now, detector_label: lbl, module_id, module_label, info };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const safeLbl = (lbl || module_id).replace(/[^a-z0-9_-]/gi, '_');
+  a.download = `detector_${safeLbl}_${now.slice(0,19).replace(/[T:]/g,'_')}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// Same export logic as downloadFinalPhotons*(), but scoped to a single
+// module's step (step.photons_out) instead of the whole scene's final pool
+// - lets every module's output be inspected/exported individually, not just
+// the very last one and the Detector's own specialised readout.
+function _findStep(moduleId) {
+  return lastResult?.steps?.find(s => s.module_id === moduleId) || null;
+}
+
+function downloadStepPhotonsJson(moduleId) {
+  const step = _findStep(moduleId);
+  if (!step?.photons_out?.length) return;
+  const now = new Date().toISOString();
+  const payload = {
+    exported_at:   now,
+    module_id:     step.module_id,
+    module_type:   step.module_type,
+    module_label:  step.module_label,
+    photon_count:  step.photons_out.length,
+    photons_out:   step.photons_out,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const safeLbl = (step.module_label || step.module_id).replace(/[^a-z0-9_-]/gi, '_');
+  a.download = `${safeLbl}_output_photons_${now.slice(0,19).replace(/[T:]/g,'_')}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function downloadStepPhotonsTxt(moduleId) {
+  const step = _findStep(moduleId);
+  if (!step?.photons_out?.length) return;
+  const photons = step.photons_out;
+  const now = new Date().toISOString();
+
+  const sep  = '═'.repeat(60);
+  const sep2 = '─'.repeat(60);
+  const fv  = (v, dec=12) => v.toExponential(dec);
+  const fvc = (v, dec=9)  => (v >= 0 ? '+' : '') + v.toFixed(dec);
+
+  let lines = [];
+  lines.push(sep);
+  lines.push(`OUTPUT PHOTONS - ${step.module_label} (${step.module_type})`);
+  lines.push(sep);
+  lines.push(`module id:      ${step.module_id}`);
+  lines.push(`exported at:    ${now}`);
+  lines.push(`photon count:   ${photons.length}`);
+  lines.push(sep);
+  lines.push('');
+
+  photons.forEach((p, i) => {
+    const r = p.r || [0,0,0];
+    const k = p.k || [0,0,0];
+    const Er = p.E_real || [0,0,0];
+    const Ei = p.E_imag || [0,0,0];
+
+    lines.push(`PHOTON ${i}`);
+    lines.push(sep2);
+    lines.push(`photon id:          ${p.photon_id ?? 'N/A'}`);
+    lines.push(`branch:             ${branchLabel(p.branch ?? 0)}`);
+    lines.push(`wavelength (nm):    ${p.wavelength_nm != null ? p.wavelength_nm.toFixed(3) : 'N/A'}`);
+    lines.push(`intensity (I):      ${p.I != null ? fv(p.I) : 'N/A'}`);
+    lines.push('');
+    lines.push('r - photon position (m)');
+    lines.push(`x: ${fv(r[0])}`);
+    lines.push(`y: ${fv(r[1])}`);
+    lines.push(`z: ${fv(r[2])}`);
+    lines.push('');
+    lines.push('k - wave-vector (rad/m)');
+    lines.push(`x: ${fv(k[0])}`);
+    lines.push(`y: ${fv(k[1])}`);
+    lines.push(`z: ${fv(k[2])}`);
+    lines.push('');
+    lines.push('E - electric field (complex, normalised)');
+    lines.push('          Re                  Im');
+    const ef = (v) => (v != null ? fvc(v, 9) : '+0.000000000').padStart(18);
+    lines.push(`x:  ${ef(Er[0])}  ${ef(Ei[0])}`);
+    lines.push(`y:  ${ef(Er[1])}  ${ef(Ei[1])}`);
+    lines.push(`z:  ${ef(Er[2])}  ${ef(Ei[2])}`);
+    if (i < photons.length - 1) lines.push(sep2);
+    lines.push('');
+  });
+
+  lines.push(sep);
+  lines.push('END');
+  lines.push(sep);
+
+  const text = lines.join('\n');
+  const blob = new Blob([text], {type: 'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const safeLbl = (step.module_label || step.module_id).replace(/[^a-z0-9_-]/gi, '_');
+  a.download = `${safeLbl}_output_photons_${now.slice(0,19).replace(/[T:]/g,'_')}.txt`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function renderPhotonTable(photons) {
+  return `<table class="photon-table">
+    <thead><tr><th>#</th><th>r (m)</th><th>I</th><th>Branch</th></tr></thead>
+    <tbody>${photons.map((p,i) => {
+      const b = p.branch ?? 0;
+      const col = branchColor(b);
+      return `<tr>
+        <td>${i}</td>
+        <td style="font-size:0.58rem">[${p.r.map(v=>v.toFixed(3)).join(', ')}]</td>
+        <td>${p.I.toPrecision(3)}</td>
+        <td><span style="font-size:0.58rem;padding:1px 5px;border-radius:8px;background:${col}22;color:${col}">${branchLabel(b)}</span></td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
+
+function kv(k, v) {
+  return `<div class="result-kv"><span class="result-k">${k}</span><span class="result-v">${v}</span></div>`;
+}
+
+// --------------------------------------------------------
+// 3D Viewport (Three.js)
+// --------------------------------------------------------
+let renderer, scene3d, camera, rayGroup, pulseGroup, updatePivotPos;
+let isDragging = false, isPanning = false, prevMouse = {x:0,y:0};
+let spherical = {theta: 0.4, phi: 1.0, radius: 3};
+const DEFAULT_SPHERICAL = {theta: 0.4, phi: 1.0, radius: 3};
+let panOffset = new THREE.Vector3(0, 0, 0);
+
+function initThree() {
+  const canvas = document.getElementById('three-canvas');
+  const vp = document.getElementById('viewport');
+  renderer = new THREE.WebGLRenderer({canvas, antialias: true, alpha: true});
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setClearColor(0x0a0c10, 1);
+  scene3d = new THREE.Scene();
+  scene3d.fog = new THREE.FogExp2(0x0a0c10, 0.08);
+  camera = new THREE.PerspectiveCamera(45, 1, 0.001, 1000);
+  scene3d.add(new THREE.AmbientLight(0x334466, 2));
+  const dl = new THREE.DirectionalLight(0x6699ff, 1.5);
+  dl.position.set(2, 4, 3); scene3d.add(dl);
+  const grid = new THREE.GridHelper(4, 20, 0x1c2230, 0x161b24);
+  scene3d.add(grid);
+  const axMat = c => new THREE.LineBasicMaterial({color:c, opacity:0.4, transparent:true});
+  const axLine = (a,b,c) => {
+    const g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(...a), new THREE.Vector3(...b)]);
+    return new THREE.Line(g, axMat(c));
+  };
+  scene3d.add(axLine([-2,0,0],[2,0,0],0x5566ff));
+  scene3d.add(axLine([0,-2,0],[0,2,0],0x44cc88));
+  scene3d.add(axLine([0,0,-2],[0,0,2],0xff6655));
+  rayGroup = new THREE.Group(); scene3d.add(rayGroup);
+  pulseGroup = new THREE.Group(); scene3d.add(pulseGroup);
+
+  // Pan pivot indicator - yellow sphere + crosshair lines, shown while panning then fades (fading doesnt work right now)
+  const pivotGeo = new THREE.SphereGeometry(0.0012, 14, 14);
+  const pivotMat = new THREE.MeshBasicMaterial({color: 0xffe066, transparent: true, opacity: 0.2, depthTest: false});
+  const pivotMesh = new THREE.Mesh(pivotGeo, pivotMat);
+  pivotMesh.renderOrder = 999;
+  scene3d.add(pivotMesh);
+
+  const pivotLineMat = new THREE.LineBasicMaterial({color: 0xffe066, transparent: true, opacity: 0.2, depthTest: false});
+  const mkLine = (a, b) => {
+    const lg = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(...a), new THREE.Vector3(...b)]);
+    const l = new THREE.Line(lg, pivotLineMat);
+    l.renderOrder = 999;
+    scene3d.add(l);
+    return l;
+  };
+  const pivotCross = [
+    mkLine([-0.06,0,0],[0.06,0,0]),
+    mkLine([0,-0.06,0],[0,0.06,0]),
+    mkLine([0,0,-0.06],[0,0,0.06]),
+  ];
+
+  let pivotFadeTimer = null, pivotFadeStart = null, pivotFading = true;
+  updatePivotPos = function() {
+    pivotMesh.position.copy(panOffset);
+    pivotCross.forEach(l => l.position.copy(panOffset));
+  };
+  function showPivot() {
+    updatePivotPos();
+    pivotMat.opacity = 0.2;
+    pivotLineMat.opacity = 0.2;
+    pivotFading = false;
+    if (pivotFadeTimer) { clearTimeout(pivotFadeTimer); pivotFadeTimer = null; }
+  }
+  function hidePivotSoon() {
+    if (pivotFadeTimer) clearTimeout(pivotFadeTimer);
+    pivotFadeTimer = setTimeout(() => {
+      pivotFading = true;
+      pivotFadeStart = null;
+      function fade(ts) {
+        if (!pivotFading) return;
+        if (!pivotFadeStart) pivotFadeStart = ts;
+        const t = Math.min((ts - pivotFadeStart) / 600, 1);
+        pivotMat.opacity = 0;//0.2 - t;
+        pivotLineMat.opacity = 0;//0.2 * (1 - t);
+        if (t < 1) requestAnimationFrame(fade);
+        else pivotFading = false;
+      }
+      requestAnimationFrame(fade);
+    }, 1);
+  }
+
+  canvas.addEventListener('mousedown', e => {
+    if (e.button === 1 || e.button === 2) {
+      isPanning = true;
+    } else {
+      isDragging = true;
+    }
+    prevMouse = {x:e.clientX, y:e.clientY};
+    if (e.button === 1) e.preventDefault(); // prevent middle-click scroll
+  });
+  canvas.addEventListener('contextmenu', e => e.preventDefault());
+  //window.addEventListener('mouseup', () => { isDragging = false; isPanning = false; }); //we have to do this later
+  window.addEventListener('mousemove', e => {
+    const dx = e.clientX - prevMouse.x;
+    const dy = e.clientY - prevMouse.y;
+    if (isDragging) {
+      spherical.theta -= dx * 0.006;
+      spherical.phi = Math.max(0.1, Math.min(Math.PI-0.1, spherical.phi + dy * 0.006));
+    } else if (isPanning) {
+      // Pan in camera-local right/up directions
+      const panSpeed = spherical.radius * 0.001;
+      // Right vector from spherical coords
+      const right = new THREE.Vector3(
+        Math.cos(spherical.theta),
+        0,
+        -Math.sin(spherical.theta)
+      ).normalize();
+      // Up vector perpendicular to camera direction and right
+      const camDir = new THREE.Vector3(
+        Math.sin(spherical.phi) * Math.sin(spherical.theta),
+        Math.cos(spherical.phi),
+        Math.sin(spherical.phi) * Math.cos(spherical.theta)
+      ).normalize();
+      const up = new THREE.Vector3().crossVectors(right, camDir).normalize();
+      panOffset.addScaledVector(right, -dx * panSpeed);
+      panOffset.addScaledVector(up, -dy * panSpeed);
+      showPivot();
+    }
+    prevMouse = {x:e.clientX, y:e.clientY};
+  });
+  window.addEventListener('mouseup', () => {
+    const wasPanning = isPanning;
+
+    isDragging = false;
+    isPanning = false;
+
+    if (wasPanning) {
+      hidePivotSoon();
+    }
+  });
+  canvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    spherical.radius = Math.max(0.01, Math.min(20, spherical.radius * (1 + e.deltaY * 0.001)));
+  }, {passive: false});
+
+  // Reset view button
+  document.getElementById('btn-reset-view').addEventListener('click', () => {
+    spherical.theta = DEFAULT_SPHERICAL.theta;
+    spherical.phi   = DEFAULT_SPHERICAL.phi;
+    spherical.radius = DEFAULT_SPHERICAL.radius;
+    panOffset.set(0, 0, 0);
+    pivotMat.opacity = 0; pivotLineMat.opacity = 0;
+  });
+
+  resize();
+  window.addEventListener('resize', resize);
+  animate();
+}
+
+function resize() {
+  const vp = document.getElementById('viewport');
+  renderer.setSize(vp.clientWidth, vp.clientHeight);
+  camera.aspect = vp.clientWidth / vp.clientHeight;
+  camera.updateProjectionMatrix();
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  const target = panOffset.clone();
+  camera.position.set(
+    target.x + spherical.radius * Math.sin(spherical.phi) * Math.sin(spherical.theta),
+    target.y + spherical.radius * Math.cos(spherical.phi),
+    target.z + spherical.radius * Math.sin(spherical.phi) * Math.cos(spherical.theta)
+  );
+  camera.lookAt(target);
+  try {
+    updatePulses();
+  } catch (e) {
+    if (!window._pulseErrorLogged) {
+      console.error('[pulses] updatePulses() threw - pulse animation disabled, rest of viewer unaffected:', e);
+      window._pulseErrorLogged = true;
+    }
+  }
+  renderer.render(scene3d, camera);
+
+  if (recordRenderer && recordCamera) {
+    recordCamera.position.copy(camera.position);
+    recordCamera.quaternion.copy(camera.quaternion);
+    recordRenderer.render(scene3d, recordCamera);
+  }
+}
+
+function drawRays(result) {
+
+  while (rayGroup.children.length) {
+    rayGroup.remove(rayGroup.children[0]);
+  }
+
+  document.getElementById('viewport-hint').style.opacity = '0';
+
+  const segments = result.segments || [];
+
+  const allPts = [];
+
+  // Gradient-medium intra-module segments are already physically accurate
+  // (from the RK4 integrator) but deliberately coarse (<= max_waypoints
+  // points, so we don't overload the viewer). Group them per-ray so we can
+  // draw one smooth spline through those points instead of a jagged
+  // straight-segment-per-waypoint polyline.
+  const gmCurveGroups = new Map();   // "moduleId:photonId" -> {points, branch}
+
+  segments.forEach(seg => {
+    const p0 = new THREE.Vector3(...seg.from);
+    const p1 = new THREE.Vector3(...seg.to);
+    allPts.push(p0, p1);
+
+    const isGradientIntra = seg.intra_module &&
+      scene.find(m => m.id === seg.module_id)?.type === 'gradient_medium';
+
+    if (isGradientIntra) {
+      const key = `${seg.module_id}:${seg.photon_id}`;
+      if (!gmCurveGroups.has(key)) {
+        gmCurveGroups.set(key, { points: [p0], branch: seg.branch });
+      }
+      gmCurveGroups.get(key).points.push(p1);
+      return;   // drawn below as a smooth curve instead of a straight line
+    }
+
+    const points = [p0, p1];
+
+    const geom = new THREE.BufferGeometry().setFromPoints(points);
+
+    const colorHex = BRANCH_COLORS[(seg.branch ?? 0) % BRANCH_COLORS.length];
+    const colorInt = parseInt(colorHex.replace('#',''), 16);
+
+    // beam line
+    const mat = new THREE.LineBasicMaterial({
+      color: colorInt,
+      transparent: true,
+      opacity: 0.9
+    });
+
+    const line = new THREE.Line(geom, mat);
+    rayGroup.add(line);
+  });
+
+  // Smooth curve through each gradient-medium ray's waypoints.
+  gmCurveGroups.forEach(({ points, branch }) => {
+    const colorHex = BRANCH_COLORS[(branch ?? 0) % BRANCH_COLORS.length];
+    const colorInt = parseInt(colorHex.replace('#', ''), 16);
+    const mat = new THREE.LineBasicMaterial({ color: colorInt, transparent: true, opacity: 0.95 });
+
+    let geom;
+    if (points.length >= 3) {
+      const curve  = new THREE.CatmullRomCurve3(points);
+      const smooth = curve.getPoints(Math.max(30, points.length * 6));
+      geom = new THREE.BufferGeometry().setFromPoints(smooth);
+    } else {
+      geom = new THREE.BufferGeometry().setFromPoints(points);
+    }
+    rayGroup.add(new THREE.Line(geom, mat));
+  });
+
+  // module markers
+  if (result.steps) {
+    result.steps.forEach(step => {
+      if (step.module_type === 'thick_lens') {
+        // Draw the actual lens geometry instead of a generic sphere marker
+        const mod = scene.find(m => m.id === step.module_id);
+        if (mod) drawThickLens(mod);
+      } else if (step.module_type === 'compound_lens') {
+        const mod = scene.find(m => m.id === step.module_id);
+        if (mod) drawCompoundLens(mod);
+      } else if (step.module_type === 'substrate') {
+        const mod = scene.find(m => m.id === step.module_id);
+        if (mod) drawSubstrate(mod);
+      } else if (step.module_type === 'gradient_medium') {
+        const mod = scene.find(m => m.id === step.module_id);
+        if (mod) drawGradientMedium(mod);
+      } else if (step.module_type === 'flat_mirror') {
+        const mod = scene.find(m => m.id === step.module_id);
+        if (mod) drawFlatMirrorDisc(mod);
+      } else if (step.module_type === 'parabolic_mirror') {
+        const mod = scene.find(m => m.id === step.module_id);
+        if (mod) drawParabolicMirrorDisc(mod);
+      } else if (step.module_type === 'beamsplitter') {
+        const mod = scene.find(m => m.id === step.module_id);
+        if (mod) drawBeamSplitterDisc(mod);
+      } else if (step.module_type === 'dielectric_mirror') {
+        const mod = scene.find(m => m.id === step.module_id);
+        if (mod) drawDielectricMirrorDisc(mod);
+      } else if (step.module_type === 'detector') {
+        const mod = scene.find(m => m.id === step.module_id);
+        if (mod) drawDetectorDisc(mod);
+      } else {
+        const ph = step.photons_out || [];
+        if (ph.length > 0) {
+          drawModuleMarker(ph[0].r, getModColor(step.module_type));
+        }
+      }
+    });
+  }
+
+  // auto fit
+  if (allPts.length > 0) {
+
+    const box = new THREE.Box3().setFromPoints(allPts);
+
+    const size = box.getSize(new THREE.Vector3()).length();
+
+    const ctr = box.getCenter(new THREE.Vector3());
+
+    spherical.radius = Math.max(size * 1.5, 0.5);
+
+    // scene3d.position.set(-ctr.x, -ctr.y, -ctr.z);
+    panOffset.copy(ctr);
+    updatePivotPos();
+    
+    document.getElementById('vp-stats').textContent =
+      `${segments.length} segments * extent ${size.toFixed(3)} m`;
+  }
+}
+
+function drawModuleMarker(r, colorHex) {
+  if (!r || r.length < 3) return;
+  const color = parseInt(colorHex.replace('#',''), 16);
+  const geo = new THREE.SphereGeometry(0.003, 10, 10, 0, Math.PI*2, Math.PI/2, Math.PI);
+  // const geo = new THREE.OctahedronGeometry(0.018, 0);
+  const mat = new THREE.MeshBasicMaterial({color, transparent:true, opacity:0.2});
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(...r); rayGroup.add(mesh);
+}
+
+// -- Generic aperture disc (flat_mirror / beamsplitter / parabolic_mirror /
+//    detector) - a translucent circle of the module's own radius+color, so
+//    every finite-aperture element is visible in the 3-D viewer, not just
+//    a point marker. ------------─
+function drawApertureDisc(center, normal, radius, colorHex, opacity) {
+  if (!radius || radius <= 0) return;
+  const color = parseInt(colorHex.replace('#', ''), 16);
+
+  let nlen = Math.hypot(normal[0], normal[1], normal[2]);
+  const nhat = nlen > 1e-9 ? [normal[0]/nlen, normal[1]/nlen, normal[2]/nlen] : [0, 0, 1];
+
+  const zAxis = new THREE.Vector3(0, 0, 1);
+  const quat  = new THREE.Quaternion().setFromUnitVectors(zAxis, new THREE.Vector3(...nhat));
+
+  const geo = new THREE.CircleGeometry(radius, 48);
+  const mat = new THREE.MeshBasicMaterial({
+    color, transparent: true, opacity,
+    side: THREE.DoubleSide, depthWrite: false,
+  });
+  const disc = new THREE.Mesh(geo, mat);
+  disc.setRotationFromQuaternion(quat);
+  disc.position.set(...center);
+  rayGroup.add(disc);
+
+  const edgeMat = new THREE.LineBasicMaterial({
+    color, transparent: true, opacity: Math.min(opacity + 0.35, 0.9),
+  });
+  const ring = new THREE.LineSegments(new THREE.EdgesGeometry(geo), edgeMat);
+  ring.setRotationFromQuaternion(quat);
+  ring.position.set(...center);
+  rayGroup.add(ring);
+}
+
+function drawFlatMirrorDisc(mod) {
+  const p = mod.params;
+  const radius = parseFloat(p.radius) || 0;
+  if (radius <= 0) return;
+  drawApertureDisc(
+    [parseFloat(p.r_x)||0, parseFloat(p.r_y)||0, parseFloat(p.r_z)||0],
+    [parseFloat(p.normal_x)||0, parseFloat(p.normal_y)||0, parseFloat(p.normal_z)||0],
+    radius, FlatMirrorColor(), 0.35,
+  );
+}
+
+function drawBeamSplitterDisc(mod) {
+  const p = mod.params;
+  const radius = parseFloat(p.radius) || 0;
+  if (radius <= 0) return;
+  drawApertureDisc(
+    [parseFloat(p.r_x)||0, parseFloat(p.r_y)||0, parseFloat(p.r_z)||0],
+    [parseFloat(p.normal_x)||0, parseFloat(p.normal_y)||0, parseFloat(p.normal_z)||0],
+    radius, '#f472b6', 0.5,   // beam splitter: 50% alpha, per spec
+  );
+}
+
+function drawDielectricMirrorDisc(mod) {
+  const p = mod.params;
+  const radius = (parseFloat(p.diameter) || 0) / 2;
+  if (radius <= 0) return;
+  drawApertureDisc(
+    [parseFloat(p.r_x)||0, parseFloat(p.r_y)||0, parseFloat(p.r_z)||0],
+    [parseFloat(p.normal_x)||0, parseFloat(p.normal_y)||0, parseFloat(p.normal_z)||0],
+    radius, '#22c1d6', 0.4,   // matches DielectricMirror.COLOR
+  );
+}
+
+// -- Off-axis paraboloid mirror: real curved surface patch --------------
+// Mirrors the geometry of optics_sim/parabola.py (OffAxisParaboloid) exactly:
+// canonical frame ex=-k_in_hat / ey = transverse(k_out_hat) / ez = ex x ey,
+// off-axis distance d = 2f/(1+cos(off_axis_angle)), focus F, and the
+// canonical-frame quadratic ray/paraboloid intersection. The aperture disc
+// (radius `radius`) is projected onto the mirror along the *incoming* beam
+// direction k_in_hat (exactly like a real OAP's clear aperture is defined),
+// so each sampled point of the disc is actually raytraced onto the curved
+// surface instead of drawn as a flat circle.
+const _v3 = {
+  sub:  (a, b) => [a[0]-b[0], a[1]-b[1], a[2]-b[2]],
+  add:  (a, b) => [a[0]+b[0], a[1]+b[1], a[2]+b[2]],
+  scale:(a, s) => [a[0]*s, a[1]*s, a[2]*s],
+  dot:  (a, b) => a[0]*b[0] + a[1]*b[1] + a[2]*b[2],
+  cross:(a, b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]],
+  norm: (a) => Math.hypot(a[0], a[1], a[2]),
+  unit: (a) => { const n = Math.hypot(a[0], a[1], a[2]); return n > 1e-30 ? [a[0]/n, a[1]/n, a[2]/n] : [0,0,0]; },
+};
+
+function _oapBuildFrame(kInHat, kOutHat) {
+  const ex = _v3.scale(kInHat, -1);
+  const kOutPerp = _v3.sub(kOutHat, _v3.scale(ex, _v3.dot(kOutHat, ex)));
+  let ey;
+  if (_v3.norm(kOutPerp) < 1e-10) {
+    let ref = [0, 1, 0];
+    if (Math.abs(_v3.dot(ex, ref)) > 0.9) ref = [0, 0, 1];
+    ey = _v3.unit(_v3.cross(ex, ref));
+  } else {
+    ey = _v3.unit(kOutPerp);
+  }
+  const ez = _v3.unit(_v3.cross(ex, ey));
+  return { ex, ey, ez };
+}
+
+function drawParabolicMirrorDisc(mod) {
+  const p = mod.params;
+  const radius = parseFloat(p.radius) || 0;
+  if (radius <= 0) return;
+
+  const f = parseFloat(p.focal_length) || 0;
+  if (f === 0) return;
+
+  const center = [parseFloat(p.r_x)||0, parseFloat(p.r_y)||0, parseFloat(p.r_z)||0];
+  const kIn  = _v3.unit([parseFloat(p.k_in_x)||0,  parseFloat(p.k_in_y)||0,  parseFloat(p.k_in_z)||0]);
+  const kOut = _v3.unit([parseFloat(p.k_out_x)||0, parseFloat(p.k_out_y)||0, parseFloat(p.k_out_z)||0]);
+  if (_v3.norm(kIn) < 1e-9 || _v3.norm(kOut) < 1e-9) return;
+
+  const { ex, ey, ez } = _oapBuildFrame(kIn, kOut);
+  // toCanonical(v) = R^T v = (v.ex, v.ey, v.ez); toGlobal(v_c) = R v_c = v_c.x*ex + v_c.y*ey + v_c.z*ez
+  const toCanonical = (v) => [_v3.dot(v, ex), _v3.dot(v, ey), _v3.dot(v, ez)];
+  const toGlobal    = (vc) => _v3.add(_v3.add(_v3.scale(ex, vc[0]), _v3.scale(ey, vc[1])), _v3.scale(ez, vc[2]));
+
+  const cosAlpha = Math.max(-1, Math.min(1, _v3.dot(_v3.scale(kIn, -1), kOut)));
+  const d = 2 * f / (1 + cosAlpha);
+  const kOutC = toCanonical(kOut);
+  const rMcC  = _v3.scale(kOutC, -d);           // mirror centre in canonical coords, from focus
+  const focus = _v3.sub(center, toGlobal(rMcC)); // F = mirror_center - R @ r_mc_canonical
+
+  // Quadratic intersection of a ray (canonical frame) with y^2+z^2-4fx-4f^2=0,
+  // returning the root closest to t=0 (the branch continuous with the mirror
+  // centre itself, which sits at t=0 by construction).
+  function intersectCanonical(rc, khatc) {
+    const [rx, ry, rz] = rc;
+    const [kx, ky, kz] = khatc;
+    const A = ky*ky + kz*kz;
+    const B = 2 * (ry*ky + rz*kz - 2*f*kx);
+    const C = ry*ry + rz*rz - 4*f*(rx + f);
+    if (Math.abs(A) < 1e-30) {
+      if (Math.abs(B) < 1e-30) return 0.0;
+      return -C / B;
+    }
+    let disc = B*B - 4*A*C;
+    if (disc < 0) disc = 0;
+    const sq = Math.sqrt(disc);
+    const t1 = (-B - sq) / (2*A), t2 = (-B + sq) / (2*A);
+    return Math.abs(t1) <= Math.abs(t2) ? t1 : t2;
+  }
+
+  // Sample the aperture disc (radius `radius`, in the plane ⊥ k_in, i.e.
+  // spanned by ey/ez since ex = -k_in_hat) and project each sample point
+  // along k_in onto the actual curved surface.
+  const N_RING = 14, N_ANG = 48;
+  const hitAt = (rho, phi) => {
+    const offset = _v3.add(_v3.scale(ey, rho*Math.cos(phi)), _v3.scale(ez, rho*Math.sin(phi)));
+    const originG = _v3.add(center, offset);
+    const rc    = toCanonical(_v3.sub(originG, focus));
+    const khatc = toCanonical(kIn);
+    const t = intersectCanonical(rc, khatc);
+    const ptC = _v3.add(rc, _v3.scale(khatc, t));
+    return _v3.add(focus, toGlobal(ptC));
+  };
+
+  const positions = [];
+  const center3d = hitAt(0, 0);
+  positions.push(...center3d);
+  for (let i = 1; i <= N_RING; i++) {
+    const rho = radius * i / N_RING;
+    for (let j = 0; j < N_ANG; j++) {
+      const phi = 2 * Math.PI * j / N_ANG;
+      positions.push(...hitAt(rho, phi));
+    }
+  }
+
+  const indices = [];
+  // inner fan: centre (0) to first ring
+  for (let j = 0; j < N_ANG; j++) {
+    const a = 1 + j, b = 1 + (j+1) % N_ANG;
+    indices.push(0, a, b);
+  }
+  // quad strips between successive rings
+  for (let i = 1; i < N_RING; i++) {
+    const base0 = 1 + (i-1)*N_ANG, base1 = 1 + i*N_ANG;
+    for (let j = 0; j < N_ANG; j++) {
+      const j2 = (j+1) % N_ANG;
+      const a0 = base0 + j, a1 = base0 + j2, b0 = base1 + j, b1 = base1 + j2;
+      indices.push(a0, b0, b1, a0, b1, a1);
+    }
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+
+  const color = 0xe8814d;
+  const group = new THREE.Group();
+  group.add(new THREE.Mesh(geo, new THREE.MeshPhongMaterial({
+    color, transparent: true, opacity: 0.35,
+    side: THREE.DoubleSide, depthWrite: false,
+  })));
+  group.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo, 25),
+    new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.55 })));
+  rayGroup.add(group);
+}
+
+function drawDetectorDisc(mod) {
+  const p = mod.params;
+  const radius = parseFloat(p.radius) || 0;
+  if (radius <= 0) return;
+  drawApertureDisc(
+    [parseFloat(p.r_x)||0, parseFloat(p.r_y)||0, parseFloat(p.r_z)||0],
+    [parseFloat(p.normal_x)||0, parseFloat(p.normal_y)||0, parseFloat(p.normal_z)||0],
+    radius, '#6b7280', 0.35,
+  );
+}
+
+function FlatMirrorColor() { return '#5b8dee'; }
+
+// -- Compound lens 3-D body (N-element stack) ----------
+// Draws each element as its own LatheGeometry using the uniform sign convention:
+//   C = vertex + R * nhat  for all surfaces.
+// Elements cycle through a colour palette so internal boundaries are visible.
+function drawCompoundLens(mod) {
+  const p    = mod.params;
+  const cx   = parseFloat(p.r_x) || 0;
+  const cy   = parseFloat(p.r_y) || 0;
+  const cz   = parseFloat(p.r_z) || 0;
+
+  const nx = parseFloat(p.n_x) || 0;
+  const ny = parseFloat(p.n_y) || 0;
+  const nz = parseFloat(p.n_z) || 0;
+  const nlen = Math.sqrt(nx*nx + ny*ny + nz*nz) || 1;
+  const nhat = [nx/nlen, ny/nlen, nz/nlen];
+
+  const N   = Math.max(1, Math.min(8, parseInt(p.n_elements) || 2));
+  const d   = parseFloat(p.diameter) || 0.05;
+  const h   = d / 2;
+
+  // -- Geometry helpers ----------─
+  const sag = (R, h) => {
+    if (R === 0) return 0;
+    const h2 = h*h, Rv = R*R;
+    if (h2 >= Rv) return Math.abs(R);
+    return Math.abs(R) - Math.sqrt(Rv - h2);
+  };
+
+  // tMin in uniform sign convention: convert to TL-equiv (Rb_TL = -Rb)
+  const tMinElem = (Rf, Rb, sf, sb) => {
+    const Ra = Rf, RbTL = -Rb;
+    if (Ra > 0 && RbTL < 0) return Math.abs(Ra) >= Math.abs(RbTL) ? 1e-10 : Math.abs(sf-sb);
+    if (RbTL > 0 && Ra < 0) return Math.abs(Ra) <= Math.abs(RbTL) ? 1e-10 : Math.abs(sf-sb);
+    if (Ra < 0 && RbTL < 0) return 1e-10;
+    return sf + sb;
+  };
+
+  // Collect radii, thicknesses, clamped
+  const radii = [];
+  for (let i = 0; i <= N; i++) radii.push(parseFloat(p[`R_${i}`]) || 0);
+
+  const sags = radii.map(R => sag(R, h));
+
+  const thicknesses = [];
+  for (let i = 0; i < N; i++) {
+    const tRaw  = parseFloat(p[`t_${i+1}`]) || 0.01;
+    const tMin  = tMinElem(radii[i], radii[i+1], sags[i], sags[i+1]) + 1e-10;
+    thicknesses.push(Math.max(tRaw, tMin));
+  }
+  const tTotal = thicknesses.reduce((a, b) => a + b, 0);
+
+  // Axial vertex positions (local frame, origin = compound-lens centre)
+  const vAx = [-tTotal / 2];
+  for (const t of thicknesses) vAx.push(vAx[vAx.length - 1] + t);
+
+  // -- Profile builder ------------
+  // C = vAx + R (uniform sign).
+  // Surface arc at radius rr: ax = C - sign(R)*sqrt(R²-rr²)
+  const N_CAP = 32, N_RIM = 2;
+
+  function buildProfile(RFront, RBack, vFrontAx, vBackAx) {
+    const pts = [];
+
+    if (RFront === 0) {
+      pts.push({ax: vFrontAx, r: 0});
+      pts.push({ax: vFrontAx, r: h});
+    } else {
+      const Cax = vFrontAx + RFront;
+      for (let i = 0; i <= N_CAP; i++) {
+        const rr = h * i / N_CAP;
+        const inside = RFront*RFront - rr*rr;
+        const off = inside > 0 ? Math.sqrt(inside) : 0;
+        pts.push({ax: Cax - Math.sign(RFront)*off, r: rr});
+      }
+    }
+
+    const rimFront = pts[pts.length - 1].ax;
+    const rimBack = (() => {
+      if (RBack === 0) return vBackAx;
+      const Cax  = vBackAx + RBack;
+      const inside = RBack*RBack - h*h;
+      const off = inside > 0 ? Math.sqrt(inside) : 0;
+      return Cax - Math.sign(RBack)*off;
+    })();
+    for (let i = 1; i <= N_RIM; i++)
+      pts.push({ax: rimFront + (rimBack - rimFront)*i/N_RIM, r: h});
+
+    if (RBack === 0) {
+      pts.push({ax: vBackAx, r: h});
+      pts.push({ax: vBackAx, r: 0});
+    } else {
+      const Cax = vBackAx + RBack;
+      for (let i = N_CAP; i >= 0; i--) {
+        const rr = h * i / N_CAP;
+        const inside = RBack*RBack - rr*rr;
+        const off = inside > 0 ? Math.sqrt(inside) : 0;
+        pts.push({ax: Cax - Math.sign(RBack)*off, r: rr});
+      }
+    }
+    return pts;
+  }
+
+  function makeElementMesh(pts2d, fillColor, edgeColor) {
+    const lathePoints = pts2d.map(({ax, r}) => new THREE.Vector2(r, ax));
+    const geo  = new THREE.LatheGeometry(lathePoints, 48);
+    const grp  = new THREE.Group();
+    grp.add(new THREE.Mesh(geo, new THREE.MeshPhongMaterial({
+      color: fillColor, transparent: true, opacity: 0.20,
+      side: THREE.DoubleSide, depthWrite: false,
+    })));
+    grp.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+      color: edgeColor, wireframe: true, transparent: true, opacity: 0.10,
+    })));
+    grp.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo, 15),
+      new THREE.LineBasicMaterial({color: edgeColor, transparent: true, opacity: 0.60})));
+    return grp;
+  }
+
+  // Colour palette cycling through elements
+  const ELEM_COLORS = [
+    [0x22aaff, 0x88ddff],   // blue       (element 1)
+    [0xaa55ff, 0xcc99ff],   // violet     (element 2)
+    [0x22ddaa, 0x88ffdd],   // teal       (element 3)
+    [0xff8822, 0xffcc88],   // amber      (element 4)
+    [0xff4488, 0xff99cc],   // pink       (element 5)
+    [0x88ff22, 0xccff88],   // lime       (element 6)
+    [0x22ccff, 0x88eeff],   // cyan       (element 7)
+    [0xffdd22, 0xffee88],   // yellow     (element 8)
+  ];
+
+  const compoundGroup = new THREE.Group();
+  for (let i = 0; i < N; i++) {
+    const pts  = buildProfile(radii[i], radii[i+1], vAx[i], vAx[i+1]);
+    const [fc, ec] = ELEM_COLORS[i % ELEM_COLORS.length];
+    compoundGroup.add(makeElementMesh(pts, fc, ec));
+  }
+
+  // Orient Y (lathe axis) -> nhat
+  const yAxis = new THREE.Vector3(0, 1, 0);
+  const target = new THREE.Vector3(...nhat);
+  const quat  = new THREE.Quaternion().setFromUnitVectors(yAxis, target);
+  compoundGroup.setRotationFromQuaternion(quat);
+  compoundGroup.position.set(cx, cy, cz);
+  rayGroup.add(compoundGroup);
+}
+
+// -- Substrate: N+1 flat (optionally wedged) surface discs, one per ------
+// interface, each oriented by its own normal (see Substrate._geometry in
+// modules/substrate.py — the vertex/normal construction here matches it
+// exactly), connected by a ruled "side wall" loft so the stack reads as a
+// single solid slab rather than N+1 disconnected discs.
+function drawSubstrate(mod) {
+  const p = mod.params;
+  const center = [parseFloat(p.r_x) || 0, parseFloat(p.r_y) || 0, parseFloat(p.r_z) || 0];
+
+  let axis = [parseFloat(p.n_x) || 1, parseFloat(p.n_y) || 0, parseFloat(p.n_z) || 0];
+  const alen = Math.hypot(...axis) || 1;
+  axis = axis.map(v => v / alen);
+
+  const N = Math.max(1, Math.min(8, parseInt(p.n_elements) || 1));
+  const h = (parseFloat(p.diameter) || 0.05) / 2;
+  if (h <= 0) return;
+
+  // Per-surface normals (N+1 of them), defaulting to the main axis
+  const normals = [];
+  for (let i = 0; i <= N; i++) {
+    let nv = [
+      parseFloat(p[`normal_${i}_x`]),
+      parseFloat(p[`normal_${i}_y`]),
+      parseFloat(p[`normal_${i}_z`]),
+    ];
+    if (nv.some(isNaN)) nv = axis.slice();
+    const nl = Math.hypot(...nv);
+    normals.push(nl > 1e-9 ? nv.map(v => v / nl) : axis.slice());
+  }
+
+  // Minimum centre thickness per element so that its front/back surfaces —
+  // independently wedged, sharing the clear aperture — never cut through
+  // each other. Mirrors Substrate._wedge_shift / _t_min_wedge in
+  // modules/substrate.py exactly: for a plane through its vertex with unit
+  // normal `n`, the point on that plane at transverse offset `h * u_hat`
+  // (u_hat ⟂ axis, |u_hat| = 1) sits at local axial position
+  //     s(u_hat) = -h * (u_hat . n) / (axis . n) = -h * (u_hat . D)
+  // where D = (n - (n.axis)*axis) / (axis.n) folds the surface's tilt into
+  // a single vector. The minimum gap between two such surfaces, over every
+  // direction on the aperture disk, is then h * |D_back - D_front|.
+  function dot(a, b) { return a[0]*b[0] + a[1]*b[1] + a[2]*b[2]; }
+  function wedgeShift(n, ax) {
+    const denom = dot(ax, n);
+    if (Math.abs(denom) < 1e-9) return [0, 0, 0];   // edge-on to axis; degenerate
+    const perp = [n[0] - denom*ax[0], n[1] - denom*ax[1], n[2] - denom*ax[2]];
+    return perp.map(v => v / denom);
+  }
+  const D = normals.map(n => wedgeShift(n, axis));
+  function tMinWedge(i) {
+    const diff = [D[i+1][0]-D[i][0], D[i+1][1]-D[i][1], D[i+1][2]-D[i][2]];
+    return h * Math.hypot(...diff);
+  }
+
+  // Vertices along the main axis — vertex_0 = front centre exactly. Each
+  // requested thickness is clamped up to its geometric minimum, exactly
+  // like the backend does, so the 3-D preview can never show (or the
+  // simulation ever trace through) crossing surfaces.
+  const vertices = [center.slice()];
+  for (let i = 1; i <= N; i++) {
+    const tRaw = parseFloat(p[`t_${i}`]) || 0.005;
+    const t = Math.max(tRaw, tMinWedge(i - 1));
+    const prev = vertices[i - 1];
+    vertices.push([prev[0] + t * axis[0], prev[1] + t * axis[1], prev[2] + t * axis[2]]);
+  }
+
+  // Stable (u, v) in-plane basis for a disc with the given normal — a pure
+  // function of the normal, so surfaces sharing the same (un-wedged, the
+  // common case) normal automatically get identical bases and the side
+  // walls come out as a clean cylinder rather than a twisted loft.
+  function discBasis(n) {
+    let ref = [0, 1, 0];
+    if (Math.abs(n[0]*ref[0] + n[1]*ref[1] + n[2]*ref[2]) > 0.9) ref = [0, 0, 1];
+    let u = [n[1]*ref[2]-n[2]*ref[1], n[2]*ref[0]-n[0]*ref[2], n[0]*ref[1]-n[1]*ref[0]];
+    const ul = Math.hypot(...u) || 1;
+    u = u.map(v => v / ul);
+    const v = [n[1]*u[2]-n[2]*u[1], n[2]*u[0]-n[0]*u[2], n[0]*u[1]-n[1]*u[0]];
+    return { u, v };
+  }
+
+  const SEG = 40;
+  const rims = normals.map((n, i) => {
+    const { u, v } = discBasis(n);
+    const pts = [];
+    for (let j = 0; j < SEG; j++) {
+      const ang = 2 * Math.PI * j / SEG;
+      const c = Math.cos(ang), s = Math.sin(ang);
+      pts.push([
+        vertices[i][0] + h*(c*u[0] + s*v[0]),
+        vertices[i][1] + h*(c*u[1] + s*v[1]),
+        vertices[i][2] + h*(c*u[2] + s*v[2]),
+      ]);
+    }
+    return pts;
+  });
+
+  const fillColor = 0xefece2;   // matches Substrate.COLOR (white-ish)
+  const edgeColor = 0xc9c5b6;
+  const group = new THREE.Group();
+
+  function addDisc(centreV, rim) {
+    const positions = [...centreV];
+    rim.forEach(pt => positions.push(...pt));
+    const indices = [];
+    for (let j = 0; j < SEG; j++) indices.push(0, 1 + j, 1 + (j + 1) % SEG);
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geo.setIndex(indices);
+    geo.computeVertexNormals();
+    group.add(new THREE.Mesh(geo, new THREE.MeshPhongMaterial({
+      color: fillColor, transparent: true, opacity: 0.22,
+      side: THREE.DoubleSide, depthWrite: false,
+    })));
+    const ringPts = [...rim, rim[0]].map(pt => new THREE.Vector3(...pt));
+    group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(ringPts),
+      new THREE.LineBasicMaterial({ color: edgeColor, transparent: true, opacity: 0.6 })));
+  }
+
+  // Only the outer front/back faces are drawn filled+outlined; internal
+  // (cemented) interfaces just get an outline, so the stack doesn't look
+  // like N+1 opaque slabs stacked behind translucent glass.
+  addDisc(vertices[0], rims[0]);
+  addDisc(vertices[N], rims[N]);
+  for (let i = 1; i < N; i++) {
+    const ringPts = [...rims[i], rims[i][0]].map(pt => new THREE.Vector3(...pt));
+    group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(ringPts),
+      new THREE.LineBasicMaterial({ color: edgeColor, transparent: true, opacity: 0.35 })));
+  }
+
+  // Ruled side-wall loft connecting consecutive surfaces into one solid
+  for (let i = 0; i < N; i++) {
+    const a = rims[i], b = rims[i + 1];
+    const positions = [];
+    a.forEach(pt => positions.push(...pt));
+    b.forEach(pt => positions.push(...pt));
+    const indices = [];
+    for (let j = 0; j < SEG; j++) {
+      const j2 = (j + 1) % SEG;
+      indices.push(j, SEG + j, SEG + j2,  j, SEG + j2, j2);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geo.setIndex(indices);
+    geo.computeVertexNormals();
+    group.add(new THREE.Mesh(geo, new THREE.MeshPhongMaterial({
+      color: fillColor, transparent: true, opacity: 0.12,
+      side: THREE.DoubleSide, depthWrite: false,
+    })));
+  }
+
+  rayGroup.add(group);
+}
+
+// -- Gradient medium 3-D box (density preview) --------─
+// The medium always lives inside a box centred at r0 (l_x, l_y, l_z).  We
+// draw that box as a wireframe, and fill it with a translucent "haze" whose
+// opacity follows the same analytic density formula as the 2-D param preview
+// (draw1DGradientProfile / draw3DGradientProfile), so both views agree.
+function drawGradientMedium(mod) {
+  const p     = mod.params;
+  const mode  = p.gradient_mode || '1D exp';
+  const cx    = parseFloat(p.r_x) || 0, cy = parseFloat(p.r_y) || 0, cz = parseFloat(p.r_z) || 0;
+  const color = 0x22d3ee;   // matches GradientMedium.COLOR (#22d3ee)
+
+  const rho0 = parseFloat(p.rho0) || 0;
+  const L    = Math.max(parseFloat(p.scale_length) || 0, 1e-9);
+
+  const lxParam = parseFloat(p.l_x) || 0, lyParam = parseFloat(p.l_y) || 0, lzParam = parseFloat(p.l_z) || 0;
+  const hasBox  = lxParam > 0 && lyParam > 0 && lzParam > 0;
+
+  // Fallback synthetic box (dashed / dim) when no box size is set, so the
+  // module is still visible and matches the 2-D preview's own fallback.
+  const fallback = 2.5 * L;
+  const lx = hasBox ? lxParam : fallback * 2, ly = hasBox ? lyParam : fallback * 2, lz = hasBox ? lzParam : fallback * 2;
+
+  const group = new THREE.Group();
+  group.position.set(cx, cy, cz);
+
+  // box wireframe
+  const boxGeo  = new THREE.BoxGeometry(lx, ly, lz);
+  const edgeMat = new THREE.LineBasicMaterial({
+    color, transparent: true, opacity: hasBox ? 0.5 : 0.25,
+  });
+  let edges;
+  if (hasBox) {
+    edges = new THREE.LineSegments(new THREE.EdgesGeometry(boxGeo), edgeMat);
+  } else {
+    edges = new THREE.LineSegments(new THREE.EdgesGeometry(boxGeo), edgeMat);
+    edges.computeLineDistances?.();
+  }
+  group.add(edges);
+
+  if (mode === 'grid_file') {
+    // No density data to preview yet - outline only.
+    rayGroup.add(group);
+    return;
+  }
+
+  const glowGroup = new THREE.Group();
+
+  if (mode === '1D exp') {
+    let nx = parseFloat(p.grad_n_x) || 0, ny = parseFloat(p.grad_n_y) || 0, nz = parseFloat(p.grad_n_z) || 0;
+    const nlen = Math.sqrt(nx*nx + ny*ny + nz*nz);
+    const nhat = nlen > 1e-9 ? [nx/nlen, ny/nlen, nz/nlen] : [1, 0, 0];
+
+    // Rotate the WHOLE box (wireframe + slab stack) so its local Z axis
+    // points along the true gradient normal n_hat - instead of only rotating
+    // the slabs while the box stays axis-aligned. Box and slabs now share
+    // one local frame by construction, so a slab's cross-section can just be
+    // the box's real l_x x l_y (no oversized diagonal guess needed) and can
+    // never poke outside the box, for any n_hat direction.
+    const zAxis = new THREE.Vector3(0, 0, 1);
+    const quat  = new THREE.Quaternion().setFromUnitVectors(zAxis, new THREE.Vector3(...nhat));
+    group.setRotationFromQuaternion(quat);
+
+    const halfZ  = lz / 2;
+    const maxRho = Math.max(rho0 * Math.exp(halfZ / L), rho0, 1e-300);
+
+    // Solid, continuos slabs stacked along the boxes own local Z (which now
+    // is the gradient axis after rotation) - exact l_x x l_y cross-section.
+    const N_SLICES  = 26;
+    const thickness = (lz / N_SLICES) * 1.02;   // slight overlap to avoid seams
+    const slabGeo   = new THREE.BoxGeometry(lx, ly, thickness);
+
+    for (let i = 0; i < N_SLICES; i++) {
+      const s   = -halfZ + lz * (i + 0.5) / N_SLICES;
+      const rho = rho0 * Math.exp(-s / L);
+      const alpha = Math.min(rho / maxRho, 1.0) * 0.4;   // solid slabs read fuller than thin sheets
+      if (alpha < 0.005) continue;
+
+      const mat  = new THREE.MeshBasicMaterial({
+        color, transparent: true, opacity: alpha,
+        side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending,
+      });
+      const mesh = new THREE.Mesh(slabGeo, mat);
+      mesh.position.set(0, 0, s);   // local frame - the group's rotation carries this to n_hat
+      glowGroup.add(mesh);
+    }
+
+  } else if (mode === '3D exp') {
+    // Isotropic falloff -> nested translucent shells, brightest at r0.
+    const halfDims  = hasBox ? [lx/2, ly/2, lz/2] : [fallback, fallback, fallback];
+    const maxRadius = Math.min(...halfDims);
+
+    const N_SHELLS = 12;
+    for (let i = N_SHELLS; i >= 1; i--) {
+      const r   = maxRadius * i / N_SHELLS;
+      const rho = rho0 * Math.exp(-r / L);
+      const alpha = Math.min(rho / Math.max(rho0, 1e-300), 1.0) * 0.14;
+      if (alpha < 0.003) continue;
+
+      const geo  = new THREE.SphereGeometry(r, 20, 14);
+      const mat  = new THREE.MeshBasicMaterial({
+        color, transparent: true, opacity: alpha,
+        side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending,
+      });
+      glowGroup.add(new THREE.Mesh(geo, mat));
+    }
+  }
+
+  group.add(glowGroup);
+  rayGroup.add(group);
+}
+
+// -------------------------------
+// -------------------------------
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => activateTab(tab.dataset.tab));
+});
+function activateTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab===name));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id===`tab-${name}`));
+}
+
+// --------------------------------------------------------
+// Pulse travel visualisation
+// --------------------------------------------------------
+// Each backend segment already carries a physically-timed window
+// [t_start, t_end] (seconds) plus its own refractive index n, so relative
+// speeds between e.g. a glass hop and the surrounding air are correct by
+// construction (see Scene.run() / append_segment() in scene.py). We turn
+// that into a moving laser-pulse video by, every frame, picking whichever
+// segments the current simulated time falls inside and drawing a short
+// oscillating wavelet (envelope x cos) centred at the interpolated position.
+//
+// Known simplification: a pulse is drawn clipped to whichever single
+// segment it currently occupies, so on segments shorter than the visual
+// pulse size (e.g. a thin lens hop) the envelope can look slightly
+// truncated right at the boundary. Speeds/timing themselves are unaffected.
+
+const C_LIGHT = 299792458.0;
+
+let pulseSegs        = [];   // prepared per-segment render records
+let pulsePlaying      = false;
+let pulseStartPerf    = 0;
+let pulseMaxT         = 0;
+let mediaRecorder     = null;
+let recordedChunks    = [];
+let recordRenderer    = null;   // offscreen higher-resolution renderer used only while recording
+let recordCamera      = null;
+
+
+function resetPulses() {
+  pulsePlaying = false;
+  dimRays(false);
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    try { mediaRecorder.stop(); } catch (e) {}
+  }
+  mediaRecorder = null;
+  if (recordRenderer) { try { recordRenderer.dispose(); } catch (e) {} recordRenderer = null; }
+  recordCamera = null;
+  if (pulseGroup) while (pulseGroup.children.length) pulseGroup.remove(pulseGroup.children[0]);
+  pulseSegs = [];
+  pulseMaxT = 0;
+  const btnGo = document.getElementById('btn-travel-pulses');
+  const btnStop = document.getElementById('btn-stop-pulses');
+  if (btnGo)   { btnGo.disabled = true; btnGo.style.display = ''; }
+  if (btnStop) { btnStop.style.display = 'none'; }
+  const st = document.getElementById('pulse-status');
+  if (st) st.textContent = '';
+}
+
+function preparePulses(result) {
+  resetPulses();
+  const segments = (result && result.segments) || [];
+  if (!segments.length) {
+    console.warn('[pulses] preparePulses: result.segments is empty/missing - nothing to animate. ' +
+                  'Full result keys:', result ? Object.keys(result) : result);
+    return;
+  }
+
+  pulseMaxT = result.max_t_end || segments.reduce((m, s) => Math.max(m, s.t_end || 0), 0);
+
+  segments.forEach(seg => {
+    const p0 = new THREE.Vector3(...seg.from);
+    const p1 = new THREE.Vector3(...seg.to);
+    const dir = new THREE.Vector3().subVectors(p1, p0);
+    const length = dir.length();
+    if (length > 1e-9) dir.normalize(); else dir.set(1, 0, 0);
+
+    // Oscillation basis = the photon's complex E-field, projected transverse
+    // to the direction of travel (a transverse EM wave has no field along
+    // k). We keep the real and imaginary parts as separate vectors (rather
+    // than collapsing to one real axis) so that a relative phase between
+    // field components - i.e. elliptical/circular polarisation - actually
+    // shows up as a rotating/elliptical wavelet instead of always
+    // oscillating back and forth along a single fixed line.
+    const eRe = new THREE.Vector3(...(seg.E_re && seg.E_re.length === 3 ? seg.E_re : [0, 0, 1]));
+    const eIm = new THREE.Vector3(...(seg.E_im && seg.E_im.length === 3 ? seg.E_im : [0, 0, 0]));
+    const eReAlong = dir.clone().multiplyScalar(eRe.dot(dir));
+    const eImAlong = dir.clone().multiplyScalar(eIm.dot(dir));
+    let eReP = eRe.clone().sub(eReAlong);
+    let eImP = eIm.clone().sub(eImAlong);
+    let eMag = Math.sqrt(eReP.lengthSq() + eImP.lengthSq());
+    if (eMag < 1e-9) {
+      const ref = Math.abs(dir.y) < 0.9 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0);
+      eReP = new THREE.Vector3().crossVectors(dir, ref).normalize();
+      eImP = new THREE.Vector3(0, 0, 0);
+      eMag = 1;
+    }
+    eReP.divideScalar(eMag);
+    eImP.divideScalar(eMag);
+    const ePerp = eReP;   // phase-0 reference axis, used for the static polarisation-axis indicator
+
+    if (pulseSegs.length < 20) {
+      console.log('[pulses] seg', seg.seg_id, ' E_re=', seg.E_re, ' E_im=', seg.E_im,
+                  ' dir=', dir.toArray().map(v=>v.toFixed(4)),
+                  ' -> eReP=', eReP.toArray().map(v=>v.toFixed(4)),
+                  ' eImP=', eImP.toArray().map(v=>v.toFixed(4)));
+    }
+
+    const colorHex = BRANCH_COLORS[(seg.branch ?? 0) % BRANCH_COLORS.length];
+    const colorInt = parseInt(colorHex.replace('#', ''), 16);
+
+    const N_PTS = 48;
+    const geom = new THREE.BufferGeometry();
+    geom.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N_PTS * 3), 3));
+    const mat = new THREE.LineBasicMaterial({ color: colorInt, transparent: true, opacity: 0.95 });
+    const line = new THREE.Line(geom, mat);
+    line.visible = false;
+    line.frustumCulled = false;
+    pulseGroup.add(line);
+
+    // Points overlay sharing the same geometry: a thin WebGL line can become
+    // near-invisible at typical zoom levels, but fixed-pixel-size points
+    // stay visible regardless of scene scale, so the wavelet always reads
+    // clearly even for small amplitudes.
+    const pmat = new THREE.PointsMaterial({
+      color: colorInt, size: 4, sizeAttenuation: false, transparent: true, opacity: 0.9,
+    });
+    const points = new THREE.Points(geom, pmat);
+    points.visible = false;
+    points.frustumCulled = false;
+    // pulseGroup.add(points);
+
+    // Static polarisation-axis indicator: a straight double-headed line
+    // through the pulse centre along ePerp, with no oscillation, so the
+    // E-field orientation can be checked independently of the wavelet
+    // shape/animation. Toggled via the "Show polarisation axis" checkbox.
+    const axisGeom = new THREE.BufferGeometry();
+    axisGeom.setAttribute('position', new THREE.BufferAttribute(new Float32Array(2 * 3), 3));
+    const axisMat = new THREE.LineBasicMaterial({
+      color: 0xffe066, transparent: true, opacity: 0.95, depthTest: false,
+    });
+    const axisLine = new THREE.Line(axisGeom, axisMat);
+    axisLine.visible = false;
+    axisLine.frustumCulled = false;
+    axisLine.renderOrder = 998;
+    pulseGroup.add(axisLine);
+
+    pulseSegs.push({ ...seg, p0, dir, length, ePerp, eReP, eImP, line, points, axisLine, N_PTS });
+  });
+
+  const btnGo = document.getElementById('btn-travel-pulses');
+  if (btnGo) btnGo.disabled = false;
+  const st = document.getElementById('pulse-status');
+  if (st) st.textContent = `Ready - longest path is ${(pulseMaxT * 1e9).toFixed(2)} ns of simulated light travel`;
+  console.log('[pulses] preparePulses done:', pulseSegs.length, 'segments,',
+              pulseGroup.children.length, 'three.js objects added to pulseGroup,',
+              'pulseGroup.parent === scene3d:', pulseGroup.parent === scene3d,
+              'pulseMaxT(ns):', (pulseMaxT * 1e9).toFixed(3));
+}
+
+function updatePulses() {
+  if (!pulsePlaying || !pulseSegs.length) return;
+
+  const durationFs = parseFloat(document.getElementById('pulse-duration-fs').value) || 6;
+  const visSizeM    = (parseFloat(document.getElementById('pulse-vis-size').value) || 5) / 100;
+  const ampCm       = parseFloat(document.getElementById('pulse-amplitude').value) || 8;
+  const playbackS   = Math.max(0.5, parseFloat(document.getElementById('pulse-playback-s').value) || 8);
+  const physLenM    = C_LIGHT * durationFs * 1e-15;   // real (unstretched) physical pulse length
+
+  const nowS      = (performance.now() - pulseStartPerf) / 1000;
+  const timeScale = pulseMaxT > 0 ? (pulseMaxT / playbackS) : 1;   // sim-seconds per wall-second
+  const simT      = nowS * timeScale;
+
+  if (!updatePulses._loggedThisRun) {
+    console.log('[pulses] first updatePulses() frame: nowS=', nowS.toFixed(4), 'simT(ns)=', (simT*1e9).toFixed(3),
+                'timeScale=', timeScale.toExponential(3), 'ampCm=', ampCm, 'visSizeM=', visSizeM);
+    updatePulses._loggedThisRun = true;
+  }
+
+  const showPolAxis = document.getElementById('pulse-show-polaxis')?.checked;
+
+  pulseSegs.forEach(seg => {
+    if (simT < seg.t_start || simT > seg.t_end || seg.duration < 1e-18) {
+      seg.line.visible = false;
+      seg.points.visible = false;
+      seg.axisLine.visible = false;
+      return;
+    }
+    const f = (simT - seg.t_start) / seg.duration;
+    const centerLocal = f * seg.length;
+
+    const lamM        = (seg.wavelength_nm || 800) * 1e-9;
+    const cycles       = Math.max(0.5, physLenM / lamM);
+    const visualLambda = visSizeM / cycles;
+    const sigma         = visSizeM / 4;
+    // Amplitude is fully independent of pulse length/duration - only the
+    // "Amplitude" field and the photon's relative intensity affect it.
+    const ampMax        = (ampCm / 100) * Math.sqrt(Math.max(seg.I ?? 1, 0));
+
+    const positions = seg.line.geometry.attributes.position.array;
+    for (let i = 0; i < seg.N_PTS; i++) {
+      const s      = -visSizeM + (2 * visSizeM) * (i / (seg.N_PTS - 1));
+      // NOTE: deliberately not clamped to [0, seg.length] - on segments
+      // shorter than the visual pulse size (e.g. a mirror kink) the
+      // wavelet is allowed to poke slightly past the endpoint rather than
+      // bunching every sample onto the same point (which made it collapse
+      // to an invisible sliver).
+      const along  = centerLocal + s;
+      const envel  = Math.exp(-(s * s) / (2 * sigma * sigma));
+      const phase  = (2 * Math.PI * s) / visualLambda;
+      const fieldVec = seg.eReP.clone().multiplyScalar(Math.cos(phase))
+                              .addScaledVector(seg.eImP, -Math.sin(phase));
+      const pt = seg.p0.clone().addScaledVector(seg.dir, along).addScaledVector(fieldVec, envel * ampMax);
+      positions[i * 3]     = pt.x;
+      positions[i * 3 + 1] = pt.y;
+      positions[i * 3 + 2] = pt.z;
+    }
+    seg.line.geometry.attributes.position.needsUpdate = true;
+    seg.line.visible = true;
+    seg.points.visible = true;
+
+    if (showPolAxis) {
+      const center = seg.p0.clone().addScaledVector(seg.dir, centerLocal);
+      const half = ampMax > 1e-9 ? ampMax * 1.6 : (visSizeM * 0.3);
+      const a = center.clone().addScaledVector(seg.ePerp, -half);
+      const b = center.clone().addScaledVector(seg.ePerp, half);
+      const axisPos = seg.axisLine.geometry.attributes.position.array;
+      axisPos[0]=a.x; axisPos[1]=a.y; axisPos[2]=a.z;
+      axisPos[3]=b.x; axisPos[4]=b.y; axisPos[5]=b.z;
+      seg.axisLine.geometry.attributes.position.needsUpdate = true;
+      seg.axisLine.visible = true;
+    } else {
+      seg.axisLine.visible = false;
+    }
+  });
+
+  const st = document.getElementById('pulse-status');
+  if (st) st.textContent = `Traveling - t = ${(simT * 1e9).toFixed(2)} / ${(pulseMaxT * 1e9).toFixed(2)} ns`;
+
+  if (nowS > playbackS + 0.15) {
+    stopPulses(true);
+  }
+}
+
+function pickVideoMimeType() {
+  const candidates = [
+    'video/mp4;codecs=avc1',
+    'video/mp4',
+    'video/webm;codecs=vp9',
+    'video/webm;codecs=vp8',
+    'video/webm',
+  ];
+  for (const c of candidates) {
+    if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(c)) return c;
+  }
+  return '';
+}
+
+function getRecordResolution() {
+  const preset = document.getElementById('pulse-res-preset').value;
+  if (preset === 'custom') {
+    const w = Math.max(64, parseInt(document.getElementById('pulse-res-width').value) || 1920);
+    const h = Math.max(64, parseInt(document.getElementById('pulse-res-height').value) || 1080);
+    return { w, h };
+  }
+  const [w, h] = preset.split('x').map(Number);
+  return { w, h };
+}
+
+function startRecording() {
+  const { w, h } = getRecordResolution();
+  const fps = Math.max(5, Math.min(60, parseInt(document.getElementById('pulse-fps').value) || 30));
+  console.log('[pulses] startRecording at', w + 'x' + h, '@', fps, 'fps');
+
+  // Render at the chosen output resolution via a separate offscreen
+  // renderer + camera, independent of the on-screen viewport size, so the
+  // preview canvas doesn't need to change and recording quality is fully
+  // user-controlled.
+  try {
+    recordRenderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    recordRenderer.setPixelRatio(1);
+    recordRenderer.setSize(w, h);
+    recordRenderer.setClearColor(0x0a0c10, 1);
+  } catch (e) {
+    console.error('[pulses] failed to create offscreen recording renderer:', e);
+    document.getElementById('pulse-status').textContent = 'Recording failed: could not create offscreen renderer.';
+    recordRenderer = null;
+    return;
+  }
+  recordCamera = camera.clone();
+  recordCamera.aspect = w / h;
+  recordCamera.updateProjectionMatrix();
+
+  if (!recordRenderer.domElement.captureStream) {
+    document.getElementById('pulse-status').textContent = 'Video recording is not supported in this browser.';
+    recordRenderer.dispose(); recordRenderer = null; recordCamera = null;
+    return;
+  }
+  const stream = recordRenderer.domElement.captureStream(fps);
+  const mime = pickVideoMimeType();
+  recordedChunks = [];
+  try {
+    mediaRecorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+  } catch (e) {
+    document.getElementById('pulse-status').textContent = 'Recording failed to start: ' + e.message;
+    recordRenderer.dispose(); recordRenderer = null; recordCamera = null;
+    return;
+  }
+  mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size) recordedChunks.push(e.data); };
+  mediaRecorder.onstop = () => {
+    const blob = new Blob(recordedChunks, { type: mime || 'video/webm' });
+    const ext  = mime.includes('mp4') ? 'mp4' : 'webm';
+    const url  = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `pulse_travel_${w}x${h}.${ext}`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    if (recordRenderer) { recordRenderer.dispose(); recordRenderer = null; }
+    recordCamera = null;
+  };
+  mediaRecorder.start();
+}
+
+function dimRays(dim) {
+  if (!rayGroup) return;
+  if (dim) {
+    rayGroup._origOpacities = rayGroup.children.map(c => (c.material ? c.material.opacity : null));
+    rayGroup.children.forEach(c => {
+      if (c.material && typeof c.material.opacity === 'number') {
+        c.material.opacity = Math.min(c.material.opacity, 0.12);
+      }
+    });
+  } else if (rayGroup._origOpacities) {
+    rayGroup.children.forEach((c, i) => {
+      const orig = rayGroup._origOpacities[i];
+      if (c.material && orig != null) c.material.opacity = orig;
+    });
+    rayGroup._origOpacities = null;
+  }
+}
+
+function startPulses() {
+  console.log('[pulses] startPulses() called. pulseSegs.length =', pulseSegs.length,
+              ' camera pos:', camera ? camera.position.toArray().map(v=>v.toFixed(3)) : 'no camera',
+              ' scene3d children:', scene3d ? scene3d.children.length : 'no scene3d');
+  if (!pulseSegs.length) {
+    console.warn('[pulses] startPulses(): no pulseSegs prepared - did Trace Rays finish successfully first?');
+    return;
+  }
+  pulseGroup.children.forEach(c => { c.visible = false; });
+  pulsePlaying = true;
+  pulseStartPerf = performance.now();
+  updatePulses._loggedThisRun = false;
+  document.getElementById('btn-travel-pulses').style.display = 'none';
+  document.getElementById('btn-stop-pulses').style.display = '';
+  if (document.getElementById('pulse-dim-rays').checked) dimRays(true);
+  if (document.getElementById('pulse-record').checked) startRecording();
+}
+
+function stopPulses(finished) {
+  pulsePlaying = false;
+  pulseGroup.children.forEach(c => { c.visible = false; });
+  dimRays(false);
+  document.getElementById('btn-travel-pulses').style.display = '';
+  document.getElementById('btn-stop-pulses').style.display = 'none';
+  const st = document.getElementById('pulse-status');
+  if (st) st.textContent = finished ? 'Done.' : 'Stopped.';
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    mediaRecorder.stop();
+  }
+}
+
+document.getElementById('btn-travel-pulses').addEventListener('click', startPulses);
+document.getElementById('btn-stop-pulses').addEventListener('click', () => stopPulses(false));
+document.getElementById('pulse-res-preset').addEventListener('change', (e) => {
+  document.getElementById('pulse-res-custom-row').style.display = (e.target.value === 'custom') ? '' : 'none';
+});
+
+// --------------------------------------------------------
+// Header buttons
+// --------------------------------------------------------
+document.getElementById('btn-run').addEventListener('click', runTrace);
+
+document.getElementById('btn-reset').addEventListener('click', async () => {
+  if (!confirm('Clear the entire scene?')) return;
+  await api('/scene/reset', 'POST');
+  scene = []; selectedId = null; lastResult = null;
+  renderPipeline(); renderParams();
+  // Clear 3-D visualisation
+  if (rayGroup) while (rayGroup.children.length) rayGroup.remove(rayGroup.children[0]);
+  if (scene3d)  scene3d.position.set(0, 0, 0);   // undo auto-fit offset
+  resetPulses();
+  spherical.theta = DEFAULT_SPHERICAL.theta;
+  spherical.phi   = DEFAULT_SPHERICAL.phi;
+  spherical.radius = DEFAULT_SPHERICAL.radius;
+  if (panOffset) panOffset.set(0, 0, 0);
+  document.getElementById('vp-stats').textContent = '';
+  document.getElementById('viewport-hint').style.opacity = '1';
+  document.getElementById('results-empty').style.display = 'block';
+  document.getElementById('results-content').style.display = 'none';
+  document.getElementById('status-photons').textContent = '';
+  setStatus('Scene reset', 'ready');
+});
+
+document.getElementById('btn-save').addEventListener('click', async () => {
+  const res = await fetch(API + '/scene/save');
+  const blob = await res.blob();
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'scene.json'; a.click();
+});
+
+document.getElementById('btn-load').addEventListener('click', () => {
+  document.getElementById('file-input').click();
+});
+document.getElementById('file-input').addEventListener('change', async e => {
+  const file = e.target.files[0]; if (!file) return;
+  const data = JSON.parse(await file.text());
+  const res  = await api('/scene/load', 'POST', data);
+  if (res.ok) { scene = res.scene; selectedId = null; renderPipeline(); renderParams(); setStatus('Scene loaded', 'ready'); }
+  e.target.value = '';
+});
+
+// --------------------------------------------------------
+// Helpers
+// --------------------------------------------------------
+function setStatus(msg, state) {
+  document.getElementById('status-text').textContent = msg;
+  document.getElementById('status-dot').className = 'status-dot ' + (state || '');
+}
+function getModColor(type) { return catalog.find(c => c.type===type)?.color ?? '#4a9eff'; }
+function getModIcon(type)  { return catalog.find(c => c.type===type)?.icon  ?? '◈'; }
+
+// =============================================
+// Parabolic Mirror: Distance from Focus to Mirror Centre
+// =============================================
+function calcParabolicDerived(params) {
+  const f = parseFloat(params.focal_length) || 0;
+  if (f === 0) return { d: 0, theta_deg: 0 };
+
+  const k_in = [params.k_in_x, params.k_in_y, params.k_in_z];
+  const k_out = [params.k_out_x, params.k_out_y, params.k_out_z];
+
+  // Normalize vectors
+  const norm = v => {
+    const len = Math.sqrt(v[0]**2 + v[1]**2 + v[2]**2);
+    return len > 0 ? v.map(x => x / len) : [0, 0, 0];
+  };
+  const k_in_n = norm(k_in);
+  const k_out_n = norm(k_out);
+
+  // Angle between -k_in and k_out
+  const neg_k_in = [-k_in_n[0], -k_in_n[1], -k_in_n[2]];
+  const dot = neg_k_in[0]*k_out_n[0] + neg_k_in[1]*k_out_n[1] + neg_k_in[2]*k_out_n[2];
+  const cos_theta = Math.max(-1, Math.min(1, dot));
+  const theta = Math.acos(cos_theta);
+
+  // Distance from focus to mirror centre (corrected formula)
+  const d = 2 * f / (1 + cos_theta);
+
+  return { d, theta_deg: theta * 180 / Math.PI };
+}
+
+// Robust form reader (explicit parameter names)
+function calcParabolicDerivedFromForm(form) {
+  const get = name => parseFloat(form.querySelector(`input[name="${name}"], input[id="${name}"]`)?.value) || 0;
+  return calcParabolicDerived({
+    focal_length: get('focal_length'),
+    k_in_x: get('k_in_x'),
+    k_in_y: get('k_in_y'),
+    k_in_z: get('k_in_z'),
+    k_out_x: get('k_out_x'),
+    k_out_y: get('k_out_y'),
+    k_out_z: get('k_out_z'),
+  });
+}
+
+
+// =============================================
+// Gradient Medium: density profile preview (1D exp / 3D exp)
+// =============================================
+
+// Show/hide param rows that only make sense for certain gradient_mode values.
+// (grad_n_* only matters for 1D exp; the exp-model fields don't apply to grid_file.)
+function updateGradientVisibility(form, mode) {
+  const setRow = (paramName, show) => {
+    const el = form.querySelector(`[id="pi_${paramName}"]`)?.closest('.param-row, [style*="margin-bottom"]');
+    if (el) el.style.display = show ? '' : 'none';
+  };
+  const isExp = mode === '1D exp' || mode === '3D exp';
+  ['r_x', 'l_x', 'rho0', 'scale_length'].forEach(p => setRow(p, isExp));
+  setRow('grad_n_x', mode === '1D exp');
+  ['grid_file_rows', 'density_scale'].forEach(p => setRow(p, mode === 'grid_file'));
+}
+
+function drawGradientPreview() {
+  const canvas = document.getElementById('gm-canvas');
+  if (!canvas || !tempGradientParams) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const pr    = tempGradientParams;
+  const mode  = pr.gradient_mode || '1D exp';
+  const rho0  = parseFloat(pr.rho0) || 0;
+
+  const modeLabelEl = document.getElementById('gm-mode-label');
+  const peakLabelEl = document.getElementById('gm-peak-label');
+  const axisInfoEl  = document.getElementById('gm-axis-info');
+  const noteEl      = document.getElementById('gm-note');
+  if (modeLabelEl) modeLabelEl.textContent = mode.toUpperCase();
+  if (peakLabelEl) peakLabelEl.textContent = `ρ₀ = ${rho0.toExponential(2)} m⁻³`;
+
+  if (mode === 'grid_file') {
+    ctx.fillStyle = '#161b24';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#4a5a70';
+    ctx.font = '12px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Preview unavailable in grid_file mode', W / 2, H / 2 - 6);
+    ctx.fillText('(density comes from the uploaded map)', W / 2, H / 2 + 12);
+    if (axisInfoEl) axisInfoEl.textContent = '';
+    if (noteEl) noteEl.textContent = '';
+    return;
+  }
+
+  const L = Math.max(parseFloat(pr.scale_length) || 0, 1e-12);
+
+  if (mode === '1D exp') {
+    draw1DGradientProfile(ctx, W, H, pr, rho0, L, axisInfoEl, noteEl);
+  } else {
+    draw3DGradientProfile(ctx, W, H, pr, rho0, L, axisInfoEl, noteEl);
+  }
+}
+
+// rho(s)/rho_0 = exp(-s/L), s = signed distance from r_0 along grad_n.
+// Density decreases along +n_hat, increases along −n_hat (per module docstring).
+function draw1DGradientProfile(ctx, W, H, pr, rho0, L, axisInfoEl, noteEl) {
+  const nx = parseFloat(pr.grad_n_x) || 0, ny = parseFloat(pr.grad_n_y) || 0, nz = parseFloat(pr.grad_n_z) || 0;
+  const nlen = Math.sqrt(nx * nx + ny * ny + nz * nz);
+  const nhat = nlen > 1e-9 ? [nx / nlen, ny / nlen, nz / nlen] : [1, 0, 0];
+
+  const lx = parseFloat(pr.l_x) || 0, ly = parseFloat(pr.l_y) || 0, lz = parseFloat(pr.l_z) || 0;
+  const boxHalf = Math.abs(nhat[0]) * lx / 2 + Math.abs(nhat[1]) * ly / 2 + Math.abs(nhat[2]) * lz / 2;
+  const D = boxHalf > 1e-12 ? boxHalf * 1.15 : 2.5 * L;
+
+  const margin = {l: 46, r: 14, t: 14, b: 26};
+  const plotW = W - margin.l - margin.r, plotH = H - margin.t - margin.b;
+
+  // Auto y-scale: exp(-s/L) is largest at s=-D (density growing toward -n_hat)
+  const yMaxMult = Math.max(1.05, Math.exp(D / L) * 1.05);
+
+  // axes
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(margin.l, margin.t);
+  ctx.lineTo(margin.l, margin.t + plotH);
+  ctx.lineTo(margin.l + plotW, margin.t + plotH);
+  ctx.stroke();
+
+  // y gridlines (multiples of rho0)
+  ctx.font = '9px Inter, sans-serif';
+  ctx.textAlign = 'right';
+  const yTicks = 4;
+  for (let i = 0; i <= yTicks; i++) {
+    const f = (yMaxMult * i) / yTicks;
+    const y = margin.t + plotH * (1 - i / yTicks);
+    ctx.strokeStyle = i === 0 ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)';
+    ctx.beginPath(); ctx.moveTo(margin.l, y); ctx.lineTo(margin.l + plotW, y); ctx.stroke();
+    ctx.fillStyle = '#7a90b0';
+    ctx.fillText(f.toFixed(1) + 'x', margin.l - 6, y + 3);
+  }
+
+  const sToX = s => margin.l + plotW * (s + D) / (2 * D);
+  const vToY = v => margin.t + plotH * (1 - Math.min(v, yMaxMult) / yMaxMult);
+
+  // shaded box extent (projection of the box half-widths onto grad_n)
+  if (boxHalf > 1e-12) {
+    const x0 = sToX(-boxHalf), x1 = sToX(boxHalf);
+    ctx.fillStyle = 'rgba(34,211,238,0.07)';
+    ctx.fillRect(x0, margin.t, x1 - x0, plotH);
+    ctx.strokeStyle = 'rgba(34,211,238,0.4)';
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(x0, margin.t); ctx.lineTo(x0, margin.t + plotH); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x1, margin.t); ctx.lineTo(x1, margin.t + plotH); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // r0 marker (s = 0)
+  ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+  ctx.beginPath(); ctx.moveTo(sToX(0), margin.t); ctx.lineTo(sToX(0), margin.t + plotH); ctx.stroke();
+
+  // curve
+  ctx.strokeStyle = '#22d3ee';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  const N = 200;
+  for (let i = 0; i <= N; i++) {
+    const s = -D + (2 * D) * i / N;
+    const v = Math.exp(-s / L);
+    const x = sToX(s), y = vToY(v);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // r0 dot
+  ctx.fillStyle = '#22d3ee';
+  ctx.beginPath(); ctx.arc(sToX(0), vToY(1), 3.5, 0, 2 * Math.PI); ctx.fill();
+
+  if (axisInfoEl) axisInfoEl.textContent =
+    `axis n_hat=[${nhat.map(v=>v.toFixed(2)).join(', ')}]  *  domain ±${fmtSI(D)}m about r₀  *  L=${fmtSI(L)}m`;
+  if (noteEl) noteEl.textContent =
+    boxHalf > 1e-12
+      ? 'Shaded band = box extent projected onto ĝrad_n. Formula: ρ(s) = ρ₀*exp(−s/L).'
+      : 'No box size set (l = 0) - showing ±2.5*L. Formula: ρ(s) = ρ₀*exp(−s/L).';
+}
+
+// rho(r)/rho_0 = exp(-|r-r0|/L), radially symmetric about r0 - rendered as a 2D slice.
+function draw3DGradientProfile(ctx, W, H, pr, rho0, L, axisInfoEl, noteEl) {
+  const l = {x: parseFloat(pr.l_x) || 0, y: parseFloat(pr.l_y) || 0, z: parseFloat(pr.l_z) || 0};
+  const dims = ['x', 'y', 'z'];
+  const allZero = l.x === 0 && l.y === 0 && l.z === 0;
+  const sorted = dims.slice().sort((a, b) => l[b] - l[a]);
+  const [dimA, dimB] = allZero ? ['x', 'y'] : sorted.slice(0, 2);
+  const halfA = l[dimA] > 0 ? l[dimA] / 2 : 2.5 * L;
+  const halfB = l[dimB] > 0 ? l[dimB] / 2 : 2.5 * L;
+  const D = Math.max(halfA, halfB) * 1.15;
+
+  const margin = {l: 46, r: 14, t: 14, b: 26};
+  const plotW = W - margin.l - margin.r, plotH = H - margin.t - margin.b;
+  const res = 90;
+  const cellW = plotW / res, cellH = plotH / res;
+
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const densityColor = v => {
+    v = Math.max(0, Math.min(1, v));
+    // dark bg -> cyan -> near-white, three-stop colormap
+    const stops = [
+      [0.00, [22, 27, 36]],
+      [0.55, [34, 211, 238]],
+      [1.00, [220, 250, 255]],
+    ];
+    let s0 = stops[0], s1 = stops[stops.length - 1];
+    for (let i = 0; i < stops.length - 1; i++) {
+      if (v >= stops[i][0] && v <= stops[i + 1][0]) { s0 = stops[i]; s1 = stops[i + 1]; break; }
+    }
+    const t = (v - s0[0]) / (s1[0] - s0[0] || 1);
+    const c = s0[1].map((c0, i) => Math.round(lerp(c0, s1[1][i], t)));
+    return `rgb(${c[0]},${c[1]},${c[2]})`;
+  };
+
+  for (let iy = 0; iy < res; iy++) {
+    const b = D - (2 * D) * (iy + 0.5) / res; // top of canvas = +D
+    for (let ix = 0; ix < res; ix++) {
+      const a = -D + (2 * D) * (ix + 0.5) / res;
+      const r = Math.sqrt(a * a + b * b);
+      const v = Math.exp(-r / L);
+      ctx.fillStyle = densityColor(v);
+      ctx.fillRect(margin.l + ix * cellW, margin.t + iy * cellH, cellW + 1, cellH + 1);
+    }
+  }
+
+  // box outline (projection onto the display plane)
+  if (l[dimA] > 0 && l[dimB] > 0) {
+    const x0 = margin.l + plotW * (D - l[dimA] / 2) / (2 * D);
+    const x1 = margin.l + plotW * (D + l[dimA] / 2) / (2 * D);
+    const y0 = margin.t + plotH * (D - l[dimB] / 2) / (2 * D);
+    const y1 = margin.t + plotH * (D + l[dimB] / 2) / (2 * D);
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.setLineDash([3, 3]);
+    ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+    ctx.setLineDash([]);
+  }
+
+  // r0 marker at plane centre
+  const cx = margin.l + plotW / 2, cy = margin.t + plotH / 2;
+  ctx.strokeStyle = '#fff';
+  ctx.beginPath(); ctx.arc(cx, cy, 4, 0, 2 * Math.PI); ctx.stroke();
+
+  ctx.font = '9px Inter, sans-serif';
+  ctx.fillStyle = '#7a90b0';
+  ctx.textAlign = 'left';
+  ctx.fillText(dimA.toUpperCase(), margin.l + plotW - 10, margin.t + plotH - 6);
+  ctx.textAlign = 'left';
+  ctx.save();
+  ctx.translate(margin.l + 10, margin.t + 10);
+  ctx.fillText(dimB.toUpperCase(), 0, 0);
+  ctx.restore();
+
+  if (axisInfoEl) axisInfoEl.textContent =
+    `slice: ${dimA.toUpperCase()}-${dimB.toUpperCase()} plane through r₀  *  span ±${fmtSI(D)}m  *  L=${fmtSI(L)}m`;
+  if (noteEl) noteEl.textContent =
+    'Isotropic falloff: ρ(r) = ρ₀*exp(−|r−r₀|/L). Dashed box = extent along the two largest box dimensions.';
+}
+
+// --------------------------------------------------------
+// Boot
+// --------------------------------------------------------
+init();
+
+// Ease-of-use: pressing Enter in any parameter/routing input applies the
+// change immediately, same as clicking "Apply Parameters"/"Apply Routing".
+// Bound once on the (always-present, never-replaced) #params-form container
+// - renderParams() only swaps its innerHTML, so a single delegated listener
+// here covers every module's inputs across every re-render without needing
+// to be re-attached each time.
+document.getElementById('params-form').addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  const el = e.target;
+  if (el.tagName !== 'INPUT' && el.tagName !== 'SELECT') return;
+  e.preventDefault();
+  if (el.closest('.routing-box')) {
+    applyRouting();
+  } else if (el.classList.contains('param-input') || el.classList.contains('param-select')) {
+    applyParams();
+  }
+});
+
+</script>
+<script>
+// ===== DRAG AND DROP REORDERING =====
+let draggedModuleId = null;
+let draggedBranch = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+  const canvas = document.getElementById('pipeline-canvas');
+
+  // Drag start
+  canvas.addEventListener('dragstart', (e) => {
+    if (e.target.classList.contains('pipe-card')) {
+      draggedModuleId = e.target.dataset.moduleId;
+      draggedBranch = parseInt(e.target.dataset.branch);
+      e.target.classList.add('dragging');
+      e.dataTransfer.setData('text/plain', 'move');
+    }
+  });
+
+  // Drag end
+  canvas.addEventListener('dragend', (e) => {
+    if (e.target.classList.contains('pipe-card')) {
+      e.target.classList.remove('dragging');
+      document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+    }
+  });
+
+  // Drag over
+  canvas.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    const target = e.target.closest('.pipe-card, .branch-rail');
+    if (!target) return;
+
+    const targetBranch = target.classList.contains('pipe-card') ?
+      parseInt(target.dataset.branch) :
+      parseInt(target.closest('.branch-row')?.dataset.branch || '0');
+
+    if (targetBranch !== draggedBranch) return;
+
+    target.classList.add('drag-over');
+    e.dataTransfer.dropEffect = 'move';
+  });
+
+  // Drag leave
+  canvas.addEventListener('dragleave', (e) => {
+    const target = e.target.closest('.pipe-card, .branch-rail');
+    if (target) target.classList.remove('drag-over');
+  });
+
+  // Drop
+  //
+  // Operates directly on the full global module order rather than
+  // rebuilding it from per-branch buckets. That per-bucket approach broke
+  // as soon as a branch row could contain "ghost" cards (a module that also
+  // appears in a row that isn't its primary branch, e.g. a Substrate fed
+  // from several front/back branches) because the same module id would end
+  // up in more than one bucket. Instead we just pull the dragged module out
+  // of the existing order and re-insert it immediately before (or after,
+  // for an empty-rail drop) the card it was dropped on - which works
+  // identically whether that card is a primary or a ghost appearance.
+  canvas.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+
+    const target = e.target.closest('.pipe-card, .branch-rail');
+    if (!target) return;
+
+    const targetBranch = target.classList.contains('pipe-card') ?
+      parseInt(target.dataset.branch) :
+      parseInt(target.closest('.branch-row')?.dataset.branch || '0');
+
+    if (targetBranch !== draggedBranch) return;
+
+    const branchRow = target.closest('.branch-row');
+    const rowModuleIds = Array.from(branchRow.querySelectorAll('.pipe-card'))
+      .map(card => card.dataset.moduleId)
+      .filter(Boolean);
+
+    // Current full pipeline order with the dragged module removed.
+    const newOrder = scene.map(m => m.id).filter(id => id !== draggedModuleId);
+
+    let insertBeforeId = null;
+    if (target.classList.contains('branch-rail')) {
+      // Dropped on empty rail space -> place right after the last card
+      // that was already in this branch row.
+      const lastInRow = rowModuleIds.filter(id => id !== draggedModuleId).pop();
+      if (lastInRow) {
+        const idx = newOrder.indexOf(lastInRow);
+        insertBeforeId = (idx >= 0 && idx + 1 < newOrder.length) ? newOrder[idx + 1] : null;
+      }
+    } else {
+      insertBeforeId = target.dataset.moduleId;
+    }
+
+    const insertIdx = insertBeforeId ? newOrder.indexOf(insertBeforeId) : -1;
+    newOrder.splice(insertIdx >= 0 ? insertIdx : newOrder.length, 0, draggedModuleId);
+
+    const res = await api('/scene/reorder', 'POST', { ids: newOrder });
+    if (res.ok) {
+      scene = res.scene;
+      renderPipeline();
+    }
+  });
+});
+</script>
+</body>
+</html>
